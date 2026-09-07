@@ -27,9 +27,12 @@ ureq = ["dep:ureq", "ureq/rustls"]
 bytes = { workspace = true }
 dav-xml = { workspace = true }
 http = { workspace = true }
+httpdate = { workspace = true }
 isahc = { workspace = true, optional = true }
+mime = { workspace = true }
 reqwest = { workspace = true, optional = true }
 thiserror = { workspace = true }
+time = { workspace = true }
 ureq = { workspace = true, optional = true }
 
 [dev-dependencies]

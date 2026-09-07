@@ -8,8 +8,9 @@ use dav_xml::FromXml;
 use dav_xml::elements::{DavError, Multistatus, Prop};
 use dav_xml::properties::LockDiscovery;
 
+use crate::capabilities::Capabilities;
 use crate::error::{Error, Result};
-use crate::headers::{self, LockTokenHeader};
+use crate::headers::{self, DavHeader, LockTokenHeader};
 
 /// Whether the response's `Content-Type` header names an XML media type.
 #[cfg_attr(
@@ -154,6 +155,45 @@ pub(crate) fn lock_discovery(
         _ => LockDiscovery::default(),
     };
     Ok((discovery, token))
+}
+
+/// Read the `DAV` and `Allow` response headers into [`Capabilities`].
+///
+/// Every occurrence of the `DAV` header is joined with `,` before parsing.
+/// `Allow` tokens that are not valid HTTP methods are skipped rather than
+/// failing the whole call.
+///
+/// # Errors
+///
+/// Returns [`Error::Status`] when `response` did not return a success
+/// status.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "consumed by request builders and clients added in later tasks"
+    )
+)]
+pub(crate) fn capabilities(response: http::Response<Vec<u8>>) -> Result<Capabilities> {
+    let response = ensure_success(response)?;
+    let dav = response
+        .headers()
+        .get_all(&headers::DAV)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .collect::<Vec<_>>()
+        .join(",")
+        .parse::<DavHeader>()
+        .unwrap_or_default();
+    let allow = response
+        .headers()
+        .get_all(http::header::ALLOW)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|value| value.split(','))
+        .filter_map(|token| http::Method::from_bytes(token.trim().as_bytes()).ok())
+        .collect();
+    Ok(Capabilities { dav, allow })
 }
 
 #[cfg(test)]
