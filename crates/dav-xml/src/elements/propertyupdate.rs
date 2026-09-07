@@ -189,6 +189,61 @@ mod tests {
     }
 
     #[test]
+    fn parses_grouped_set_and_remove_after_mutable_access() {
+        let value = PropertyUpdate::new()
+            .set(
+                Prop::builder()
+                    .property(DisplayName("first".into()))
+                    .build(),
+            )
+            .set(
+                Prop::builder()
+                    .property(DisplayName("second".into()))
+                    .build(),
+            )
+            .remove(Prop::builder().name::<DisplayName>().build());
+        let Value::Map(mut map) = Value::from(value) else {
+            panic!();
+        };
+        map.as_mut();
+
+        let update = PropertyUpdate::try_from(&Value::Map(map)).unwrap();
+
+        assert_eq!(update.0.len(), 3);
+        assert!(matches!(update.0[0], PropertyUpdateItem::Set(_)));
+        assert!(matches!(update.0[1], PropertyUpdateItem::Set(_)));
+        assert!(matches!(update.0[2], PropertyUpdateItem::Remove(_)));
+    }
+
+    #[test]
+    fn parses_grouped_set_and_remove_from_index_map() {
+        let set =
+            |name: &str| Set(Prop::builder().property(DisplayName(name.into())).build()).into();
+        let remove: Value = Remove(Prop::builder().name::<DisplayName>().build()).into();
+        let map = ValueMap::from(indexmap::IndexMap::from([
+            (
+                Set::element_name::<bytestring::ByteString>(),
+                Value::List(Box::new(nonempty::nonempty![set("first"), set("second")])),
+            ),
+            (
+                Remove::element_name::<bytestring::ByteString>(),
+                Value::List(Box::new(nonempty::nonempty![
+                    remove.clone(),
+                    remove.clone(),
+                ])),
+            ),
+        ]));
+
+        let update = PropertyUpdate::try_from(&Value::Map(map)).unwrap();
+
+        assert_eq!(update.0.len(), 4);
+        assert!(matches!(update.0[0], PropertyUpdateItem::Set(_)));
+        assert!(matches!(update.0[1], PropertyUpdateItem::Set(_)));
+        assert!(matches!(update.0[2], PropertyUpdateItem::Remove(_)));
+        assert!(matches!(update.0[3], PropertyUpdateItem::Remove(_)));
+    }
+
+    #[test]
     fn builder_writes_set_then_remove() {
         let update = PropertyUpdate::new()
             .set(Prop::builder().property(DisplayName("new".into())).build())
