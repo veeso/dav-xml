@@ -285,7 +285,7 @@ mod tests {
 
     use super::*;
     use crate::elements::{Condition, DavError, LockScope, LockType};
-    use crate::{FromXml, IntoXml};
+    use crate::{ContentItem, FromXml, IntoXml};
 
     const APACHE: &str = r#"<D:prop xmlns:D="DAV:" xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
   <lp1:resourcetype><D:collection/></lp1:resourcetype>
@@ -383,6 +383,76 @@ mod tests {
                 (Some("DAV:".to_owned()), "x".to_owned()),
                 (Some("urn:example".to_owned()), "custom".to_owned()),
             ]
+        );
+    }
+
+    #[test]
+    fn round_trips_mixed_custom_property_value() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom>before<Z:child/>after</Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+        let custom_name: ElementName<ByteString> = ElementName {
+            namespace: Some("urn:example".into()),
+            prefix: None,
+            local_name: "custom".into(),
+        };
+
+        assert_eq!(
+            prop.0.as_ref().get(&custom_name),
+            Some(&Value::Mixed(vec![
+                ContentItem::Text("before".into()),
+                ContentItem::Element {
+                    name: ElementName::<ByteString> {
+                        namespace: Some("urn:example".into()),
+                        prefix: None,
+                        local_name: "child".into(),
+                    },
+                    value: Value::Empty,
+                },
+                ContentItem::Text("after".into()),
+            ]))
+        );
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
+        );
+    }
+
+    #[test]
+    fn ignores_formatting_whitespace_around_property_children() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom>
+    <Z:child/>
+  </Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+        let custom_name: ElementName<ByteString> = ElementName {
+            namespace: Some("urn:example".into()),
+            prefix: None,
+            local_name: "custom".into(),
+        };
+
+        assert_eq!(
+            prop.0.as_ref().get(&custom_name),
+            Some(&Value::Map({
+                let mut map = ValueMap::new();
+                map.insert_raw(
+                    ElementName::<ByteString> {
+                        namespace: Some("urn:example".into()),
+                        prefix: None,
+                        local_name: "child".into(),
+                    },
+                    Value::Empty,
+                );
+                map
+            }))
         );
     }
 
