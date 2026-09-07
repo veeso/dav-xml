@@ -6,21 +6,55 @@
 Rust WebDAV toolkit ([RFC 4918](https://www.rfc-editor.org/rfc/rfc4918)):
 XML (de)serialization and a minimal HTTP client.
 
-| Crate            | Description                                 |
-| ---------------- | ------------------------------------------- |
-| `dav-xml`        | XML elements, properties, (de)serialization |
-| `dav-xml-client` | Sync and async WebDAV client                |
+| Crate                                               | Description                                 |
+| --------------------------------------------------- | ------------------------------------------- |
+| [`dav-xml`](crates/dav-xml/README.md)               | XML elements, properties, (de)serialization |
+| [`dav-xml-client`](crates/dav-xml-client/README.md) | Sync and async WebDAV client                |
+
+## Quick start
+
+### `dav-xml`
+
+```rust,no_run
+use dav_xml::FromXml;
+use dav_xml::elements::Multistatus;
+
+let xml = std::fs::read("multistatus.xml")?;
+let multistatus = Multistatus::from_xml(xml)?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+See the [`dav-xml` README](crates/dav-xml/README.md) for a fuller example
+and for extending the property set.
+
+### `dav-xml-client`
+
+```rust,no_run
+use dav_xml_client::{Auth, DavClient};
+
+let client = DavClient::ureq(Auth::basic("alice", "secret"));
+let exists = client.exists("https://dav.example.com/file.txt")?;
+# let _ = exists;
+# Ok::<(), dav_xml_client::Error>(())
+```
+
+See the [`dav-xml-client` README](crates/dav-xml-client/README.md) for the
+feature matrix, backend choices, and async examples.
 
 ## RFC 4918 coverage
 
 | Section | Items                              | Status |
 | ------- | ---------------------------------- | ------ |
+| 9       | All 12 methods                     | Full   |
+| 10      | All headers                        | Full   |
 | 14      | All 30 XML elements                | Full   |
 | 15      | All 10 live properties             | Full   |
 | 16      | All 7 pre- and postcondition codes | Full   |
 
 ### Not covered
 
+- Digest authentication
+- Streaming request or response bodies
 - RFC 3744
 - RFC 4331
 - RFC 3253
