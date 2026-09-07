@@ -1112,6 +1112,11 @@ impl AsyncDavClient<reqwest::Client> {
     /// A client over [`crate::transport::reqwest::default_client`], which
     /// follows no redirects.
     ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Transport`] when the underlying
+    /// [`reqwest::ClientBuilder`] fails to build.
+    ///
     /// # Examples
     ///
     /// ```no_run
@@ -1119,14 +1124,16 @@ impl AsyncDavClient<reqwest::Client> {
     /// # async fn main() {
     /// use dav_xml_client::{AsyncDavClient, Auth};
     ///
-    /// let client = AsyncDavClient::reqwest(Auth::basic("alice", "secret"));
+    /// let client = AsyncDavClient::reqwest(Auth::basic("alice", "secret")).unwrap();
     /// let exists = client.exists("https://example.com/file").await.unwrap();
     /// # let _ = exists;
     /// # }
     /// ```
-    #[must_use]
-    pub fn reqwest(auth: Auth) -> Self {
-        Self::new(crate::transport::reqwest::default_client(), auth)
+    pub fn reqwest(auth: Auth) -> Result<Self> {
+        Ok(Self::new(
+            crate::transport::reqwest::default_client()?,
+            auth,
+        ))
     }
 
     /// A client over a caller-configured [`reqwest::Client`].
@@ -1144,7 +1151,8 @@ impl AsyncDavClient<reqwest::Client> {
     /// use dav_xml_client::transport::reqwest::default_client;
     /// use dav_xml_client::{AsyncDavClient, Auth};
     ///
-    /// let client = AsyncDavClient::reqwest_with(default_client(), Auth::basic("alice", "secret"));
+    /// let client =
+    ///     AsyncDavClient::reqwest_with(default_client().unwrap(), Auth::basic("alice", "secret"));
     /// let exists = client.exists("https://example.com/file").await.unwrap();
     /// # let _ = exists;
     /// # }

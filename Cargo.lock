@@ -241,7 +241,6 @@ dependencies = [
 name = "dav-xml-client"
 version = "0.1.0"
 dependencies = [
- "bytes",
  "dav-xml",
  "http",
  "httpdate",

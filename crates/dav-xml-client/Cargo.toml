@@ -13,6 +13,14 @@ repository.workspace = true
 rust-version.workspace = true
 description = "Minimal sync and async WebDAV (RFC 4918) client."
 
+# `reqwest` and `ureq` both default to rustls (`reqwest`'s `default-tls`
+# resolves to `reqwest/rustls`; `ureq`'s own `rustls` feature is always on
+# below), so this crate's `rustls` feature is a no-op for both backends.
+# `native-tls`, however, actively switches `default_client`/`default_agent`
+# to the native-tls backend for whichever of the two is enabled; enabling
+# both `native-tls` and `rustls` together (as `--all-features` does)
+# resolves to `native-tls`. `isahc` always builds with its own bundled
+# `default-tls`, unaffected by either feature.
 [features]
 containers = ["mock"]
 default = ["reqwest"]
@@ -24,7 +32,6 @@ rustls = ["reqwest?/rustls", "ureq?/rustls"]
 ureq = ["dep:ureq", "ureq/rustls"]
 
 [dependencies]
-bytes = { workspace = true }
 dav-xml = { workspace = true }
 http = { workspace = true }
 httpdate = { workspace = true }
