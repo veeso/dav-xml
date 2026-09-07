@@ -60,7 +60,7 @@ impl<'x> XmlReader<'x> {
                     if preserve_mixed {
                         let text = unescape(&text).map_err(quick_xml::Error::from)?;
                         let text: ByteString = xml.maybe_slice_ref(text.as_bytes()).try_into()?;
-                        content.push(ContentItem::Text(text));
+                        push_mixed_text(&mut content, text);
                         continue;
                     }
 
@@ -115,7 +115,7 @@ impl<'x> XmlReader<'x> {
                     drop(cdata);
 
                     if preserve_mixed {
-                        content.push(ContentItem::Text(head));
+                        push_mixed_text(&mut content, head);
                         continue;
                     }
 
@@ -131,7 +131,7 @@ impl<'x> XmlReader<'x> {
                     drop(reference);
 
                     if preserve_mixed {
-                        content.push(ContentItem::Text(head));
+                        push_mixed_text(&mut content, head);
                         continue;
                     }
 
@@ -239,6 +239,16 @@ fn validate_namespace_declarations(xml: &bytes::Bytes, tag: &BytesStart<'_>) -> 
 
 fn is_owner_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(crate::DAV_NAMESPACE) && name.local_name == "owner"
+}
+
+fn push_mixed_text(content: &mut Vec<ContentItem>, text: ByteString) {
+    if let Some(ContentItem::Text(previous)) = content.last_mut() {
+        let mut merged = previous.to_string();
+        merged.push_str(&text);
+        *previous = merged.into();
+    } else {
+        content.push(ContentItem::Text(text));
+    }
 }
 
 fn mixed_value(items: Vec<ContentItem>) -> Value {

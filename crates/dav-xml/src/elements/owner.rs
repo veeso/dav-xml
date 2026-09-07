@@ -262,6 +262,19 @@ mod tests {
     }
 
     #[test]
+    fn round_trips_adjacent_text_cdata_and_entity_chunks() {
+        let owner = Owner::from_xml(
+            br#"<D:owner xmlns:D="DAV:">head &amp; <![CDATA[before]]><D:href>/u</D:href>tail &amp;<![CDATA[ after]]></D:owner>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        let xml = owner.clone().into_xml().unwrap();
+
+        assert_eq!(Owner::from_xml(xml).unwrap(), owner);
+    }
+
+    #[test]
     fn round_trips_mixed_owner_with_foreign_namespace() {
         let owner = Owner(Value::Mixed(vec![
             ContentItem::Text("before".into()),
