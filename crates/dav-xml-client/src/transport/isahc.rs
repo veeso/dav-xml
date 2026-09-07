@@ -38,6 +38,7 @@ impl Transport for isahc::HttpClient {
         &self,
         request: http::Request<Vec<u8>>,
     ) -> Result<http::Response<Vec<u8>>, TransportError> {
+        let request = request.map(sync_body);
         let mut response = isahc::HttpClient::send(self, request).map_err(convert)?;
         let body = response
             .bytes()
@@ -52,6 +53,7 @@ impl AsyncTransport for isahc::HttpClient {
         &self,
         request: http::Request<Vec<u8>>,
     ) -> Result<http::Response<Vec<u8>>, TransportError> {
+        let request = request.map(async_body);
         let mut response = self.send_async(request).await.map_err(convert)?;
         let body = response
             .bytes()
@@ -59,6 +61,33 @@ impl AsyncTransport for isahc::HttpClient {
             .map_err(|error| TransportError::new(TransportErrorKind::Io, error))?;
         let (parts, _body) = response.into_parts();
         Ok(http::Response::from_parts(parts, body))
+    }
+}
+
+/// Convert a request body into [`isahc::Body`], mapping an empty `Vec<u8>`
+/// to [`isahc::Body::empty`] rather than a zero-length buffer.
+///
+/// `isahc` only configures libcurl's `NOBODY`/`CUSTOMREQUEST` handling
+/// correctly for the true "no body" case (`Body::is_empty`, which `From<Vec<u8>>`
+/// never produces). Without this, a `HEAD` request sent with an empty
+/// `Vec<u8>` body — as every verb this client sends without a body uses —
+/// is configured as a custom request with an upload, and libcurl then
+/// expects a response body matching `Content-Length` that a compliant
+/// `HEAD` response never sends, failing with "Transferred a partial file".
+fn sync_body(body: Vec<u8>) -> isahc::Body {
+    if body.is_empty() {
+        isahc::Body::empty()
+    } else {
+        isahc::Body::from(body)
+    }
+}
+
+/// Async counterpart of [`sync_body`], for [`isahc::AsyncBody`].
+fn async_body(body: Vec<u8>) -> isahc::AsyncBody {
+    if body.is_empty() {
+        isahc::AsyncBody::empty()
+    } else {
+        isahc::AsyncBody::from(body)
     }
 }
 
