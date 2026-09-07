@@ -252,7 +252,7 @@ impl Prop {
 
     /// Names of every child element, including custom properties.
     pub fn names(&self) -> impl Iterator<Item = &ElementName<ByteString>> {
-        self.0.iter().map(|(name, _)| name)
+        self.0.iter_ordered().map(|(name, _)| name)
     }
 }
 
@@ -356,6 +356,34 @@ mod tests {
         let prop = Prop::from_xml(APACHE.as_bytes().to_vec()).unwrap();
         assert_eq!(prop.names().count(), 11);
         assert!(prop.names().any(|name| name.local_name == "executable"));
+    }
+
+    #[test]
+    fn names_lists_repeated_children_in_document_order() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example"><D:x/><D:x/><Z:custom/></D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        let names: Vec<_> = prop
+            .names()
+            .map(|name| {
+                (
+                    name.namespace.as_deref().map(str::to_owned),
+                    name.local_name.to_string(),
+                )
+            })
+            .collect();
+
+        assert_eq!(
+            names,
+            [
+                (Some("DAV:".to_owned()), "x".to_owned()),
+                (Some("DAV:".to_owned()), "x".to_owned()),
+                (Some("urn:example".to_owned()), "custom".to_owned()),
+            ]
+        );
     }
 
     #[test]

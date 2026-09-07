@@ -90,6 +90,54 @@ mod tests {
     }
 
     #[test]
+    fn serializes_repeated_and_custom_properties_as_empty_children() {
+        let remove = Remove::from_xml(
+            br#"<D:remove xmlns:D="DAV:" xmlns:Z="urn:example"><D:prop><D:x>first</D:x><D:x>second</D:x><Z:custom>value</Z:custom></D:prop></D:remove>"#.to_vec(),
+        )
+        .unwrap();
+
+        let output = remove.into_xml().unwrap();
+        let Value::Map(root_map) = Value::from_xml(output).unwrap() else {
+            panic!();
+        };
+        let Some((_, remove_value)) = root_map.iter_ordered().next() else {
+            panic!();
+        };
+        let Value::Map(remove_map) = remove_value else {
+            panic!();
+        };
+        let Some((_, prop_value)) = remove_map.iter_ordered().next() else {
+            panic!();
+        };
+        let Value::Map(prop_map) = prop_value else {
+            panic!();
+        };
+        let children: Vec<_> = prop_map
+            .iter_ordered()
+            .map(|(name, value)| {
+                (
+                    name.namespace.as_deref().map(str::to_owned),
+                    name.local_name.to_string(),
+                    value.clone(),
+                )
+            })
+            .collect();
+
+        assert_eq!(
+            children,
+            [
+                (Some("DAV:".to_owned()), "x".to_owned(), Value::Empty),
+                (Some("DAV:".to_owned()), "x".to_owned(), Value::Empty),
+                (
+                    Some("urn:example".to_owned()),
+                    "custom".to_owned(),
+                    Value::Empty,
+                ),
+            ]
+        );
+    }
+
+    #[test]
     fn missing_prop_is_reported() {
         let error = Remove::from_xml(br#"<D:remove xmlns:D="DAV:"/>"#.to_vec()).unwrap_err();
         assert!(matches!(
