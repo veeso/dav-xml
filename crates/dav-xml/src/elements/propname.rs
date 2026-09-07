@@ -7,12 +7,24 @@ unit_element!(
     /// ([RFC 4918 section 14.21](https://www.rfc-editor.org/rfc/rfc4918#section-14.21)).
     ///
     /// Requests the names of the properties of a resource.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::FromXml;
+    /// use dav_xml::elements::PropName;
+    ///
+    /// let propname = PropName::from_xml(br#"<D:propname xmlns:D="DAV:"/>"#.to_vec()).unwrap();
+    /// assert_eq!(propname, PropName);
+    /// ```
     PropName,
     "propname"
 );
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
     use crate::{FromXml, IntoXml};
 

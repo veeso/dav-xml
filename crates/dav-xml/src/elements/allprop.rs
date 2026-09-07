@@ -7,12 +7,24 @@ unit_element!(
     /// ([RFC 4918 section 14.2](https://www.rfc-editor.org/rfc/rfc4918#section-14.2)).
     ///
     /// Requests all properties of a resource.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::FromXml;
+    /// use dav_xml::elements::AllProp;
+    ///
+    /// let allprop = AllProp::from_xml(br#"<D:allprop xmlns:D="DAV:"/>"#.to_vec()).unwrap();
+    /// assert_eq!(allprop, AllProp);
+    /// ```
     AllProp,
     "allprop"
 );
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
     use crate::{FromXml, IntoXml};
 

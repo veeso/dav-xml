@@ -7,6 +7,16 @@ unit_element!(
     /// ([RFC 4918 section 14.27](https://www.rfc-editor.org/rfc/rfc4918#section-14.27)).
     ///
     /// Marks a lock scope as shared.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::FromXml;
+    /// use dav_xml::elements::Shared;
+    ///
+    /// let shared = Shared::from_xml(br#"<D:shared xmlns:D="DAV:"/>"#.to_vec()).unwrap();
+    /// assert_eq!(shared, Shared);
+    /// ```
     Shared,
     "shared"
 );
