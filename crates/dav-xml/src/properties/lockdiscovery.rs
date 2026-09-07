@@ -67,7 +67,7 @@ mod tests {
             owner: None,
             timeout: None,
             locktoken: None,
-            lockroot: LockRoot::from(path.parse::<Href>().unwrap()),
+            lockroot: Some(LockRoot::from(path.parse::<Href>().unwrap())),
         }
     }
 
