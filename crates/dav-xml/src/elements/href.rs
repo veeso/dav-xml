@@ -4,12 +4,57 @@
 
 use std::str::FromStr;
 
+use iri_string::types::UriReferenceString;
+
 use crate::value::Value;
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error};
 
 /// The `href` XML element as defined in [RFC 4918](http://webdav.org/specs/rfc4918.html#ELEMENT_href).
-#[derive(Clone, Debug, PartialEq)]
-pub struct Href(pub http::Uri);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Href(pub HrefUri);
+
+/// A URI reference used in an [`Href`].
+///
+/// Unlike [`http::Uri`], this supports opaque URI references such as `WebDAV`
+/// lock tokens using the `urn:` scheme.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HrefUri(UriReferenceString);
+
+impl HrefUri {
+    /// The URI scheme, if the reference has one.
+    #[must_use]
+    pub fn scheme_str(&self) -> Option<&str> {
+        self.0.scheme_str()
+    }
+
+    /// The URI host, if the reference has an authority component.
+    #[must_use]
+    pub fn host(&self) -> Option<&str> {
+        self.0
+            .authority_components()
+            .map(|authority| authority.host())
+    }
+
+    /// The URI path.
+    #[must_use]
+    pub fn path(&self) -> &str {
+        self.0.path_str()
+    }
+}
+
+impl std::fmt::Display for HrefUri {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromStr for HrefUri {
+    type Err = iri_string::validate::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        UriReferenceString::try_from(value).map(Self)
+    }
+}
 
 impl Element for Href {
     const NAMESPACE: &'static str = DAV_NAMESPACE;
@@ -35,17 +80,23 @@ impl From<Href> for Value {
     }
 }
 
+impl From<http::Uri> for HrefUri {
+    fn from(uri: http::Uri) -> Self {
+        Self::from_str(&uri.to_string()).expect("an HTTP URI is a valid URI reference")
+    }
+}
+
 impl From<http::Uri> for Href {
     fn from(uri: http::Uri) -> Self {
-        Href(uri)
+        Self(uri.into())
     }
 }
 
 impl FromStr for Href {
-    type Err = <http::Uri as FromStr>::Err;
+    type Err = iri_string::validate::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        http::Uri::from_str(s).map(Href)
+        HrefUri::from_str(s).map(Href)
     }
 }
 
@@ -64,6 +115,12 @@ mod tests {
         let relative =
             Href::from_xml(br#"<D:href xmlns:D="DAV:">/a/b/</D:href>"#.to_vec()).unwrap();
         assert_eq!(relative.0.path(), "/a/b/");
+    }
+
+    #[test]
+    fn converts_http_uri() {
+        let href = Href::from("https://example.org/a".parse::<http::Uri>().unwrap());
+        assert_eq!(href.0.host(), Some("example.org"));
     }
 
     #[test]

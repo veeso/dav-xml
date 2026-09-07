@@ -39,3 +39,49 @@ macro_rules! unit_element {
         }
     };
 }
+
+/// Define a `DAV:` element whose only content is one `href` child.
+macro_rules! href_element {
+    ($(#[$meta:meta])* $name:ident, $local_name:literal) => {
+        $(#[$meta])*
+        #[derive(Clone, Debug, PartialEq, Eq)]
+        pub struct $name(pub $crate::elements::Href);
+
+        impl From<$crate::elements::Href> for $name {
+            fn from(href: $crate::elements::Href) -> Self {
+                Self(href)
+            }
+        }
+
+        impl $crate::Element for $name {
+            const NAMESPACE: &'static str = $crate::DAV_NAMESPACE;
+            const PREFIX: &'static str = $crate::DAV_PREFIX;
+            const LOCAL_NAME: &'static str = $local_name;
+        }
+
+        impl TryFrom<&$crate::Value> for $name {
+            type Error = $crate::Error;
+
+            fn try_from(value: &$crate::Value) -> ::std::result::Result<Self, Self::Error> {
+                match value {
+                    $crate::Value::Empty => Err($crate::Error::MissingElement {
+                        parent: <Self as $crate::Element>::LOCAL_NAME,
+                        element: <$crate::elements::Href as $crate::Element>::LOCAL_NAME,
+                    }),
+                    _ => value
+                        .as_map_of::<Self>()?
+                        .get_required::<Self, $crate::elements::Href>()
+                        .map(Self),
+                }
+            }
+        }
+
+        impl From<$name> for $crate::Value {
+            fn from(element: $name) -> $crate::Value {
+                let mut map = $crate::ValueMap::new();
+                map.insert::<$crate::elements::Href>(element.0.into());
+                $crate::Value::Map(map)
+            }
+        }
+    };
+}
