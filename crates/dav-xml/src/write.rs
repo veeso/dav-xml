@@ -47,7 +47,7 @@ fn validate_value_in_context(
     match value {
         Value::List(list) => list
             .iter()
-            .try_for_each(|item| validate_value_in_context(name, item, children_opaque)),
+            .try_for_each(|item| validate_value_in_context(name, item, opaque)),
         Value::Text(_) | Value::Empty => validate_error(name, value),
         Value::Map(map) => {
             validate_error(name, value)?;
@@ -597,6 +597,24 @@ mod tests {
                 value: Value::Empty,
             }]),
         );
+
+        let mut out = Vec::new();
+        let error = write_xml::<Root>(&mut out, Value::Map(map)).unwrap_err();
+        assert!(matches!(
+            error,
+            Error::InvalidValueType {
+                element: "error",
+                expected: "child elements",
+            }
+        ));
+    }
+
+    #[test]
+    fn validates_repeated_error_siblings_individually() {
+        let error_name = name(DAV_NAMESPACE, DAV_PREFIX, DavError::LOCAL_NAME);
+        let mut map = ValueMap::new();
+        map.insert_raw(error_name.clone(), Value::Text("invalid".into()));
+        map.insert_raw(error_name, Value::Text("also-invalid".into()));
 
         let mut out = Vec::new();
         let error = write_xml::<Root>(&mut out, Value::Map(map)).unwrap_err();
