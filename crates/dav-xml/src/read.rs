@@ -277,10 +277,27 @@ fn is_prop_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(crate::DAV_NAMESPACE) && name.local_name == "prop"
 }
 
+fn is_structured_property_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(crate::DAV_NAMESPACE)
+        && matches!(
+            name.local_name.as_ref(),
+            "lockdiscovery" | "resourcetype" | "supportedlock"
+        )
+}
+
 fn child_mode(mode: ReadMode, name: &ElementName<ByteString>) -> ReadMode {
     match mode {
         ReadMode::Mixed => ReadMode::Mixed,
-        ReadMode::Prop | ReadMode::Property => {
+        ReadMode::Prop => {
+            if is_owner_name(name) {
+                ReadMode::Mixed
+            } else if is_structured_property_name(name) {
+                ReadMode::Structured
+            } else {
+                ReadMode::Property
+            }
+        }
+        ReadMode::Property => {
             if is_owner_name(name) {
                 ReadMode::Mixed
             } else {
@@ -324,14 +341,45 @@ fn property_value(items: Vec<ContentItem>) -> Value {
         };
     }
 
-    match first_significant_text {
-        None => mixed_value(
+    if first_significant_text.is_some() {
+        return Value::Mixed(items);
+    }
+
+    let Some(first_element) = items
+        .iter()
+        .position(|item| matches!(item, ContentItem::Element { .. }))
+    else {
+        return Value::Map(ValueMap::new());
+    };
+    let Some(last_element) = items
+        .iter()
+        .rposition(|item| matches!(item, ContentItem::Element { .. }))
+    else {
+        return Value::Map(ValueMap::new());
+    };
+    let has_internal_text = items[first_element..=last_element]
+        .iter()
+        .any(|item| matches!(item, ContentItem::Text(_)));
+
+    if has_internal_text {
+        Value::Mixed(
+            items
+                .into_iter()
+                .enumerate()
+                .filter_map(|(index, item)| {
+                    (first_element..=last_element)
+                        .contains(&index)
+                        .then_some(item)
+                })
+                .collect(),
+        )
+    } else {
+        mixed_value(
             items
                 .into_iter()
                 .filter(|item| matches!(item, ContentItem::Element { .. }))
                 .collect(),
-        ),
-        Some(_) => Value::Mixed(items),
+        )
     }
 }
 

@@ -31,29 +31,43 @@ pub(crate) fn write_xml<E: Element>(writer: impl std::io::Write, value: Value) -
 }
 
 fn validate_value(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
-    if is_owner_name(name) {
+    validate_value_in_context(name, value, false)
+}
+
+fn validate_value_in_context(
+    name: &ElementName<ByteString>,
+    value: &Value,
+    opaque: bool,
+) -> Result<()> {
+    if opaque || is_owner_name(name) {
         return Ok(());
     }
+    let children_opaque = is_prop_name(name);
 
     match value {
-        Value::List(list) => list.iter().try_for_each(|item| validate_value(name, item)),
+        Value::List(list) => list
+            .iter()
+            .try_for_each(|item| validate_value_in_context(name, item, children_opaque)),
         Value::Text(_) | Value::Empty => validate_error(name, value),
         Value::Map(map) => {
             validate_error(name, value)?;
-            map.iter()
-                .try_for_each(|(child, value)| validate_value(child, value))
+            map.iter().try_for_each(|(child, value)| {
+                validate_value_in_context(child, value, children_opaque)
+            })
         }
         Value::Mixed(items) => {
             validate_error(name, value)?;
-            items.iter().try_for_each(validate_content_item)
+            items
+                .iter()
+                .try_for_each(|item| validate_content_item(item, children_opaque))
         }
     }
 }
 
-fn validate_content_item(item: &ContentItem) -> Result<()> {
+fn validate_content_item(item: &ContentItem, opaque: bool) -> Result<()> {
     match item {
         ContentItem::Text(_) => Ok(()),
-        ContentItem::Element { name, value } => validate_value(name, value),
+        ContentItem::Element { name, value } => validate_value_in_context(name, value, opaque),
     }
 }
 
@@ -190,8 +204,7 @@ impl<W: std::io::Write> XmlWriter<W> {
                     self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
                 } else {
                     self.write_mixed(&items)?;
-                    self.inner
-                        .write_event(Event::End(BytesEnd::new(raw_name)))?;
+                    self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
                 }
             }
             Value::List(_) => {
@@ -239,8 +252,7 @@ impl<W: std::io::Write> XmlWriter<W> {
                 self.inner
                     .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
                 self.write_mixed(items)?;
-                self.inner
-                    .write_event(Event::End(BytesEnd::new(raw_name)))?;
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
             }
         }
         Ok(())
@@ -354,6 +366,10 @@ impl<W: std::io::Write> XmlWriter<W> {
 
 fn is_owner_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == "owner"
+}
+
+fn is_prop_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == "prop"
 }
 
 #[cfg(test)]

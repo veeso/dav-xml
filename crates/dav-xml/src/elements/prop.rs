@@ -442,7 +442,39 @@ mod tests {
     fn round_trips_adjacent_mixed_custom_property_children() {
         let prop = Prop::from_xml(
             br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
-  <Z:custom>before<Z:a/><Z:b/>after</Z:custom>
+  <Z:custom>before<Z:a/><Z:b/></Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
+        );
+    }
+
+    #[test]
+    fn preserves_whitespace_between_mixed_custom_property_children() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom><Z:a/> <Z:b/></Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
+        );
+    }
+
+    #[test]
+    fn treats_dav_named_custom_property_content_as_opaque() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom><D:error>example</D:error></Z:custom>
 </D:prop>"#
                 .to_vec(),
         )
