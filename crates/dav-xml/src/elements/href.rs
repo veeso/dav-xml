@@ -10,11 +10,14 @@ use crate::value::Value;
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error};
 
 /// The `href` XML element as defined in [RFC 4918](http://webdav.org/specs/rfc4918.html#ELEMENT_href).
+///
+/// Opaque URI references are kept as raw text when [`http::Uri`] cannot retain
+/// their URI scheme, such as Apache `opaquelocktoken:` lock tokens.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Href {
     /// A URI supported by [`http::Uri`].
     Uri(http::Uri),
-    /// An opaque URI reference that [`http::Uri`] cannot parse.
+    /// An opaque URI reference that [`http::Uri`] cannot represent with its scheme.
     Raw(ByteString),
 }
 
@@ -91,6 +94,9 @@ impl FromStr for Href {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         match http::Uri::from_str(value) {
+            Ok(uri) if uri.scheme_str().is_none() && is_valid_opaque_uri(value) => {
+                Ok(Self::Raw(value.into()))
+            }
             Ok(uri) => Ok(Self::Uri(uri)),
             Err(error) => {
                 if is_valid_opaque_uri(value) {
@@ -234,6 +240,14 @@ mod tests {
             Href::from_xml(href.clone().into_xml().unwrap()).unwrap(),
             href
         );
+    }
+
+    #[test]
+    fn preserves_opaque_lock_token_as_raw_text() {
+        let text = "opaquelocktoken:7d4a5c26-1229-4e55-ae5a-0476d7b6dfd4";
+        let href = Href::from_xml(format!("<D:href xmlns:D=\"DAV:\">{text}</D:href>")).unwrap();
+        assert_eq!(href, Href::Raw(text.into()));
+        assert_eq!(href.scheme_str(), Some("opaquelocktoken"));
     }
 
     #[test]
