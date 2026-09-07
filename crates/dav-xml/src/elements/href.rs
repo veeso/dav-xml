@@ -124,6 +124,13 @@ mod tests {
     }
 
     #[test]
+    fn http_uri_rejects_opaque_urn() {
+        "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4"
+            .parse::<http::Uri>()
+            .unwrap_err();
+    }
+
+    #[test]
     fn rejects_non_text() {
         let error =
             Href::from_xml(br#"<D:href xmlns:D="DAV:"><x/></D:href>"#.to_vec()).unwrap_err();
