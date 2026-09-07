@@ -43,13 +43,13 @@ feature matrix, backend choices, and async examples.
 
 ## RFC 4918 coverage
 
-| Section | Items                              | Status |
-| ------- | ---------------------------------- | ------ |
-| 9       | All 12 methods                     | Full   |
-| 10      | All headers                        | Full   |
-| 14      | All 30 XML elements                | Full   |
-| 15      | All 10 live properties             | Full   |
-| 16      | All 7 pre- and postcondition codes | Full   |
+| Section | Items                                       | Status  |
+| ------- | ------------------------------------------- | ------- |
+| 9       | 11 of 12 methods (`POST`, 9.5, not covered) | Partial |
+| 10      | All headers, including `OPTIONS` (10.1)     | Full    |
+| 14      | All 30 XML elements                         | Full    |
+| 15      | All 10 live properties                      | Full    |
+| 16      | All 7 pre- and postcondition codes          | Full    |
 
 ### Not covered
 
