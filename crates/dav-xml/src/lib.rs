@@ -121,6 +121,7 @@ where
     T: Element + Into<Value>,
 {
     fn write_xml(self, writer: impl std::io::Write) -> Result<()> {
+        self.validate()?;
         write::write_xml::<T>(writer, self.into())
     }
 }

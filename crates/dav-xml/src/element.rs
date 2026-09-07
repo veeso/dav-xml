@@ -11,6 +11,16 @@ pub trait Element {
     /// The local name of the element (the name inside the namespace), e.g.
     /// `multistatus`
     const LOCAL_NAME: &'static str;
+
+    /// Validate that this element can be serialized.
+    ///
+    /// # Errors
+    ///
+    /// Returns an element-specific error when the value cannot be represented
+    /// as valid XML.
+    fn validate(&self) -> crate::Result<()> {
+        Ok(())
+    }
 }
 
 pub(crate) trait ElementExt: Element {
