@@ -46,6 +46,11 @@ pub enum Condition {
     /// `DAV:lock-token-matches-request-uri` (UNLOCK).
     LockTokenMatchesRequestUri,
     /// `DAV:lock-token-submitted`, with any locked resources supplied by the server.
+    ///
+    /// RFC 4918 section 16 requires one or more `href` children. For
+    /// interoperability, this crate also accepts and serializes an empty value,
+    /// because the published examples in sections 9.6.2, 9.8.8, and 9.9.6 use
+    /// an empty `lock-token-submitted` element.
     LockTokenSubmitted(Vec<Href>),
     /// `DAV:no-conflicting-lock`, with the conflicting resources if known.
     NoConflictingLock(Vec<Href>),

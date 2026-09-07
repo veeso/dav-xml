@@ -3,6 +3,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 //! Every XML example of RFC 4918 parses, re-serializes and parses again.
+//!
+//! ## Fixture provenance
+//!
+//! `9.9.5-multistatus.xml` keeps the plan-mandated filename, but contains the
+//! XML body from RFC 4918 section 9.9.6: section 9.9.5 has only a header-only
+//! response. Likewise, `9.10.10-error.xml` contains the RFC 4918 section 16
+//! condition example, because RFC 4918 has no section 9.10.10.
 
 use dav_xml::elements::{
     DavError, LockInfo, Multistatus, Prop, PropFind, PropertyUpdate, Response,
