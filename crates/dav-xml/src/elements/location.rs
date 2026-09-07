@@ -12,7 +12,7 @@ href_element!(
     /// use dav_xml::elements::{Href, Location};
     /// use dav_xml::IntoXml;
     ///
-    /// let location = Location::from(Href("https://example.org/new".parse().unwrap()));
+    /// let location = Location::from("https://example.org/new".parse::<Href>().unwrap());
     /// let xml = location.into_xml().unwrap();
     /// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:location"));
     /// ```
@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn parses_href() {
         let location = Location::from_xml(XML.to_vec()).unwrap();
-        assert_eq!(location.0.0.scheme_str(), Some("urn"));
+        assert_eq!(location.0.scheme_str(), Some("urn"));
     }
 
     #[test]

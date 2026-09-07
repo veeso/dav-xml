@@ -127,7 +127,7 @@ mod tests {
         else {
             panic!("expected propstat response")
         };
-        assert_eq!(href.0.path(), "/a");
+        assert_eq!(href.path(), "/a");
         assert_eq!(propstat.len(), 3);
         assert_eq!(responsedescription.unwrap().0, "x");
     }

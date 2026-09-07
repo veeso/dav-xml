@@ -330,7 +330,7 @@ mod tests {
     fn insert_raw_keeps_single_value() {
         let mut map = ValueMap::new();
         map.insert_raw(href_key(), Value::Text("/a".into()));
-        assert_eq!(map.get::<Href>().unwrap().unwrap().0.path(), "/a");
+        assert_eq!(map.get::<Href>().unwrap().unwrap().path(), "/a");
     }
 
     #[test]
@@ -340,7 +340,7 @@ mod tests {
             map.insert_raw(href_key(), Value::Text(path.into()));
         }
         let hrefs = map.get_all::<Href>().unwrap();
-        let paths: Vec<_> = hrefs.iter().map(|h| h.0.path().to_string()).collect();
+        let paths: Vec<_> = hrefs.iter().map(|href| href.path().to_string()).collect();
         assert_eq!(paths, ["/a", "/b", "/c"]);
         let list = map.as_ref().get(&href_key()).unwrap().as_list().unwrap();
         assert!(list.iter().all(|v| !v.is_list()), "no nested lists");
@@ -379,6 +379,6 @@ mod tests {
         map.insert::<Href>(Value::Text("/a".into()));
         map.insert::<Href>(Value::Text("/b".into()));
         assert_eq!(map.get_all::<Href>().unwrap().len(), 1);
-        assert_eq!(map.get::<Href>().unwrap().unwrap().0.path(), "/b");
+        assert_eq!(map.get::<Href>().unwrap().unwrap().path(), "/b");
     }
 }

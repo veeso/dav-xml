@@ -34,7 +34,7 @@ pub use self::allprop::AllProp;
 pub use self::collection::Collection;
 pub use self::depth::{Depth, InvalidDepth};
 pub use self::exclusive::Exclusive;
-pub use self::href::{Href, HrefUri};
+pub use self::href::Href;
 pub use self::include::Include;
 pub use self::location::Location;
 pub use self::lockentry::LockEntry;
