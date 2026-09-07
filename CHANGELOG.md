@@ -64,6 +64,8 @@ Released on 2026-09-07
 - **dav-xml:** document lock elements and validate urn fallback
 - **dav-xml:** document rfc 4918 coverage
 - **dav-xml:** document RFC fixture provenance
+- **dav-xml-client:** document features, backends and usage
+- add crates.io and docs.rs badges
 
 ### Fixed
 
@@ -125,6 +127,45 @@ Released on 2026-09-07
 > under-delivers the Content-Length it advertises, which libcurl reports
 > as a partial transfer. Map an empty body to isahc's own empty body
 > type so HEAD (and other bodyless verbs) is recognised correctly.
+
+- **dav-xml-client:** make ureq/reqwest backends consistent and wire up TLS features
+
+> Read the response body through ureq's unlimited BodyWithConfig reader
+> instead of read_to_vec(), which silently caps bodies at 10 MiB and
+> surfaces an overrun as an opaque Io error, unlike the isahc and
+> reqwest adapters. Document all three settings ureq_with requires
+> (previously only http_status_as_error was mentioned), since a caller
+> building their own ureq::Agent had no way to learn about
+> max_redirects(0) or allow_non_standard_methods(true).
+>
+> Wire up the native-tls feature for real instead of leaving it inert:
+> reqwest's default-tls already resolves to rustls and ureq's
+> TlsProvider already defaults to rustls, so enabling native-tls
+> previously compiled a whole unused TLS stack. default_client() and
+> default_agent() now select the native-tls backend when the feature is
+> on, and reqwest::default_client() returns a Result instead of
+> silently falling back to reqwest's default (redirect-following)
+> client on a builder failure, matching isahc's existing fallible
+> pattern. Propagate the new Result through AsyncDavClient::reqwest.
+>
+> Also drop the unused bytes dependency and correct isahc's
+> default_client doc, which claimed a redirect-policy difference from
+> isahc::HttpClient::new that does not exist (isahc already defaults to
+> no redirects).
+
+- **dav-xml-client:** reject asymmetric Lock-Token brackets and correct stale docs
+- **tests:** wait for the WebDAV container to be healthy before testing
+
+> `just containers_up` returned as soon as `docker compose up -d`
+> started the container, before the WebDAV server inside it was
+> actually accepting requests, so the container CI job and a fast local
+> `just test_containers` run could race a server that was not ready
+> yet. Add a healthcheck to the `webdav` service (the bytemark/webdav
+> image only ships `wget`, no `curl`, so it probes with `wget --spider`
+> using the configured Basic auth credentials, since an unauthenticated
+> request returns 401 and reads as unhealthy) and switch `containers_up`
+> to `docker compose up -d --wait`, which now blocks until the
+> container reports healthy.
 
 ### Style
 
