@@ -18,13 +18,19 @@
 pub use dav_xml::DAV_NAMESPACE;
 
 pub mod auth;
+pub mod capabilities;
 pub mod error;
 pub mod headers;
 pub(crate) mod request;
+pub mod resource;
 pub(crate) mod response;
 pub mod transport;
 
 #[doc(inline)]
 pub use auth::Auth;
 #[doc(inline)]
+pub use capabilities::Capabilities;
+#[doc(inline)]
 pub use error::{Error, Result};
+#[doc(inline)]
+pub use resource::Resource;
