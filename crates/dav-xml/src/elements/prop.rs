@@ -143,8 +143,8 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::FromXml;
-    use crate::elements::{LockScope, LockType};
+    use crate::elements::{Condition, DavError, LockScope, LockType};
+    use crate::{FromXml, IntoXml};
 
     const APACHE: &str = r#"<D:prop xmlns:D="DAV:" xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
   <lp1:resourcetype><D:collection/></lp1:resourcetype>
@@ -215,5 +215,28 @@ mod tests {
         let prop = Prop::from_xml(APACHE.as_bytes().to_vec()).unwrap();
         assert_eq!(prop.names().count(), 11);
         assert!(prop.names().any(|name| name.local_name == "executable"));
+    }
+
+    #[test]
+    fn rejects_nested_empty_lock_token_submitted() {
+        let mut prop = Prop::default();
+        prop.insert::<DavError>(DavError::single(Condition::LockTokenSubmitted(Vec::new())).into());
+
+        let error = prop.into_xml().unwrap_err();
+        assert!(matches!(
+            error,
+            Error::MissingElement {
+                parent: "lock-token-submitted",
+                element: "href",
+            }
+        ));
+    }
+
+    #[test]
+    fn serializes_nested_empty_no_conflicting_lock() {
+        let mut prop = Prop::default();
+        prop.insert::<DavError>(DavError::single(Condition::NoConflictingLock(Vec::new())).into());
+
+        prop.into_xml().unwrap();
     }
 }

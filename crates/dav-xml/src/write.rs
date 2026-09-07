@@ -11,9 +11,13 @@ use quick_xml::events::attributes::Attribute;
 use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 
 use crate::element::{Element, ElementExt, ElementName};
-use crate::{Error, Result, Value};
+use crate::elements::DavError;
+use crate::{DAV_NAMESPACE, Error, Result, Value};
 
 pub(crate) fn write_xml<E: Element>(writer: impl std::io::Write, value: Value) -> Result<()> {
+    let name = E::element_name();
+    validate_value(&name, &value)?;
+
     let mut writer = XmlWriter {
         inner: quick_xml::Writer::new_with_indent(writer, b' ', 2),
         namespaces: BTreeMap::new(),
@@ -22,9 +26,22 @@ pub(crate) fn write_xml<E: Element>(writer: impl std::io::Write, value: Value) -
         .inner
         .write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
 
-    let name = E::element_name();
     writer.collect_namespaces(&name, &value);
     writer.write_root::<E>(&name, value)
+}
+
+fn validate_value(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
+    if name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == DavError::LOCAL_NAME {
+        DavError::try_from(value)?.validate()?;
+    }
+
+    match value {
+        Value::Text(_) | Value::Empty => Ok(()),
+        Value::List(list) => list.iter().try_for_each(|item| validate_value(name, item)),
+        Value::Map(map) => map
+            .iter()
+            .try_for_each(|(child, value)| validate_value(child, value)),
+    }
 }
 
 struct XmlWriter<W: std::io::Write> {
@@ -179,8 +196,8 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::DAV_PREFIX;
     use crate::value::ValueMap;
-    use crate::{DAV_NAMESPACE, DAV_PREFIX};
 
     struct Root;
 
