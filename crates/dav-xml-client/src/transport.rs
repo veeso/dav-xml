@@ -15,7 +15,7 @@ mod isahc;
 #[cfg(any(test, feature = "mock"))]
 mod mock;
 #[cfg(feature = "reqwest")]
-mod reqwest;
+pub mod reqwest;
 #[cfg(feature = "ureq")]
 pub mod ureq;
 
