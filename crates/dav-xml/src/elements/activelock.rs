@@ -32,7 +32,12 @@ pub struct ActiveLock {
     /// The optional lock token.
     pub locktoken: Option<LockToken>,
     /// The locked resource's root URI.
-    pub lockroot: LockRoot,
+    ///
+    /// [RFC 4918](https://www.rfc-editor.org/rfc/rfc4918#section-14.1) lists
+    /// `lockroot` as required, but real-world servers (Apache `mod_dav`
+    /// among them) omit it from `LOCK` responses, so it is parsed and
+    /// written as optional.
+    pub lockroot: Option<LockRoot>,
 }
 
 impl Element for ActiveLock {
@@ -53,7 +58,7 @@ impl TryFrom<&Value> for ActiveLock {
             owner: map.get().transpose()?,
             timeout: map.get().transpose()?,
             locktoken: map.get().transpose()?,
-            lockroot: map.get_required::<Self, LockRoot>()?,
+            lockroot: map.get().transpose()?,
         })
     }
 }
@@ -73,7 +78,9 @@ impl From<ActiveLock> for Value {
         if let Some(locktoken) = lock.locktoken {
             map.insert::<LockToken>(locktoken.into());
         }
-        map.insert::<LockRoot>(lock.lockroot.into());
+        if let Some(lockroot) = lock.lockroot {
+            map.insert::<LockRoot>(lockroot.into());
+        }
         Value::Map(map)
     }
 }
@@ -112,7 +119,10 @@ mod tests {
             lock.locktoken.unwrap().0.to_string(),
             "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4"
         );
-        assert_eq!(lock.lockroot.0.path(), "/workspace/webdav/proposal.doc");
+        assert_eq!(
+            lock.lockroot.unwrap().0.path(),
+            "/workspace/webdav/proposal.doc"
+        );
     }
 
     #[test]
@@ -125,16 +135,10 @@ mod tests {
     }
 
     #[test]
-    fn missing_lockroot_is_reported() {
+    fn lockroot_defaults_to_none() {
         let xml = br#"<D:activelock xmlns:D="DAV:"><D:locktype><D:write/></D:locktype><D:lockscope><D:shared/></D:lockscope><D:depth>0</D:depth></D:activelock>"#;
-        let error = ActiveLock::from_xml(xml.to_vec()).unwrap_err();
-        assert!(matches!(
-            error,
-            Error::MissingElement {
-                parent: "activelock",
-                element: "lockroot"
-            }
-        ));
+        let lock = ActiveLock::from_xml(xml.to_vec()).unwrap();
+        assert_eq!(lock.lockroot, None);
     }
 
     #[test]

@@ -347,7 +347,10 @@ mod tests {
         let supported_lock = prop.supportedlock().unwrap().unwrap().unwrap();
 
         assert_eq!(lock_discovery.0.len(), 1);
-        assert_eq!(lock_discovery.0[0].lockroot.0.path(), "/locked");
+        assert_eq!(
+            lock_discovery.0[0].lockroot.clone().unwrap().0.path(),
+            "/locked"
+        );
         assert!(supported_lock.supports(LockScope::Exclusive, LockType::Write));
     }
 
