@@ -4,6 +4,7 @@
 
 //! XML element definitions from [RFC 4918 section 14](https://www.rfc-editor.org/rfc/rfc4918#section-14).
 
+mod activelock;
 mod allprop;
 mod collection;
 mod depth;
@@ -30,6 +31,7 @@ mod status;
 mod timeout;
 mod write;
 
+pub use self::activelock::ActiveLock;
 pub use self::allprop::AllProp;
 pub use self::collection::Collection;
 pub use self::depth::{Depth, InvalidDepth};

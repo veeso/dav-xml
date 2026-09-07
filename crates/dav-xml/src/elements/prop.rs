@@ -7,7 +7,7 @@ use bytestring::ByteString;
 use crate::element::{Element, ElementName};
 use crate::properties::{
     ContentLanguage, ContentLength, ContentType, CreationDate, DisplayName, ETag, LastModified,
-    ResourceType,
+    LockDiscovery, ResourceType, SupportedLock,
 };
 use crate::value::{Value, ValueMap};
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Error};
@@ -97,6 +97,18 @@ impl Prop {
         self.get()
     }
 
+    /// Read the `lockdiscovery` property.
+    #[must_use]
+    pub fn lockdiscovery(&self) -> Option<Option<Result<LockDiscovery, Error>>> {
+        self.get()
+    }
+
+    /// Read the `supportedlock` property.
+    #[must_use]
+    pub fn supportedlock(&self) -> Option<Option<Result<SupportedLock, Error>>> {
+        self.get()
+    }
+
     /// Names of every child element, including custom properties.
     pub fn names(&self) -> impl Iterator<Item = &ElementName<ByteString>> {
         self.0.iter().map(|(name, _)| name)
@@ -143,6 +155,7 @@ mod tests {
   <D:displayname>x</D:displayname>
   <D:getcontentlanguage>en</D:getcontentlanguage>
   <lp2:executable>F</lp2:executable>
+  <D:lockdiscovery/>
   <D:supportedlock/>
 </D:prop>"#;
 
@@ -166,6 +179,8 @@ mod tests {
         );
         assert_eq!(prop.displayname().unwrap().unwrap().unwrap().0, "x");
         assert_eq!(prop.getcontentlanguage().unwrap().unwrap().unwrap().0, "en");
+        assert!(matches!(prop.lockdiscovery(), Some(None)));
+        assert!(matches!(prop.supportedlock(), Some(None)));
     }
 
     #[test]
@@ -179,7 +194,7 @@ mod tests {
     #[test]
     fn names_lists_every_child_including_foreign() {
         let prop = Prop::from_xml(APACHE.as_bytes().to_vec()).unwrap();
-        assert_eq!(prop.names().count(), 10);
+        assert_eq!(prop.names().count(), 11);
         assert!(prop.names().any(|name| name.local_name == "executable"));
     }
 }
