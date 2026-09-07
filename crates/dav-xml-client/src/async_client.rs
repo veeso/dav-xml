@@ -1154,3 +1154,54 @@ impl AsyncDavClient<reqwest::Client> {
         Self::new(client, auth)
     }
 }
+
+#[cfg(feature = "isahc")]
+impl AsyncDavClient<isahc::HttpClient> {
+    /// A client over [`crate::transport::isahc::default_client`], which
+    /// follows no redirects.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Transport`] when libcurl cannot be initialised.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// use dav_xml_client::{AsyncDavClient, Auth};
+    ///
+    /// let client = AsyncDavClient::isahc(Auth::basic("alice", "secret")).unwrap();
+    /// let exists = client.exists("https://example.com/file").await.unwrap();
+    /// # let _ = exists;
+    /// # }
+    /// ```
+    pub fn isahc(auth: Auth) -> Result<Self> {
+        Ok(Self::new(crate::transport::isahc::default_client()?, auth))
+    }
+
+    /// A client over a caller-configured [`isahc::HttpClient`].
+    ///
+    /// `isahc`'s default redirect policy already follows no redirects, but
+    /// build `client` accordingly if you have overridden it, or `3xx`
+    /// responses are resolved by `isahc` instead of reaching this client.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// use dav_xml_client::transport::isahc::default_client;
+    /// use dav_xml_client::{AsyncDavClient, Auth};
+    ///
+    /// let client =
+    ///     AsyncDavClient::isahc_with(default_client().unwrap(), Auth::basic("alice", "secret"));
+    /// let exists = client.exists("https://example.com/file").await.unwrap();
+    /// # let _ = exists;
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn isahc_with(client: isahc::HttpClient, auth: Auth) -> Self {
+        Self::new(client, auth)
+    }
+}

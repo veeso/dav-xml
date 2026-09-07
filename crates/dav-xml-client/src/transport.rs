@@ -11,7 +11,7 @@
 //! `isahc`.
 
 #[cfg(feature = "isahc")]
-mod isahc;
+pub mod isahc;
 #[cfg(any(test, feature = "mock"))]
 mod mock;
 #[cfg(feature = "reqwest")]
