@@ -44,3 +44,9 @@ check:
   just doc
   just deny
   just test
+
+# Run the complete local quality gate plus every backend feature combination.
+[group('code-check')]
+check_all:
+  just check
+  just test_features

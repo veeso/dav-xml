@@ -25,10 +25,12 @@ test_containers args="":
   cargo test -p dav-xml-client --all-features --test containers {{ args }}
 
 # Run the test suite for every backend feature combination.
+# `containers` is left out of the last combination since it pulls in
+# `tests/containers.rs`, which needs a live server (see `test_containers`).
 [group('test')]
 test_features args="":
-  cargo test -p dav-xml-client --no-default-features {{ args }}
-  cargo test -p dav-xml-client --no-default-features --features ureq {{ args }}
-  cargo test -p dav-xml-client --no-default-features --features reqwest {{ args }}
-  cargo test -p dav-xml-client --no-default-features --features isahc {{ args }}
-  cargo test -p dav-xml-client --all-features {{ args }}
+  cargo test -p dav-xml-client --no-default-features --features mock {{ args }}
+  cargo test -p dav-xml-client --no-default-features --features "ureq,mock" {{ args }}
+  cargo test -p dav-xml-client --no-default-features --features "reqwest,mock" {{ args }}
+  cargo test -p dav-xml-client --no-default-features --features "isahc,mock" {{ args }}
+  cargo test -p dav-xml-client --no-default-features --features "isahc,mock,native-tls,reqwest,rustls,ureq" {{ args }}

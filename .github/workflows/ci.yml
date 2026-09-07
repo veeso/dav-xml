@@ -61,6 +61,60 @@ jobs:
       - name: Lint
         run: just lint "-- -D warnings"
 
+  features:
+    name: Feature combinations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Cache Cargo data
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-features-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+      - name: Test every backend feature set
+        run: just test_features
+
+  containers:
+    name: Integration (containers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Cache Cargo data
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-containers-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6 # v2.87.7
+        with:
+          tool: cargo-llvm-cov
+      - name: Start WebDAV container
+        run: just containers_up
+      - name: Test with coverage
+        run: just coverage "lcov.info" "--all-features"
+      - name: Stop WebDAV container
+        if: ${{ always() }}
+        run: just containers_down
+      - name: Upload coverage
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: lcov.info
+
   documentation:
     name: Documentation
     runs-on: ubuntu-latest
@@ -81,7 +135,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install cargo-deny
-        uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
+        uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6 # v2.87.7
         with:
           tool: cargo-deny
       - name: Install just
