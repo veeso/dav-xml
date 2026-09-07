@@ -153,6 +153,21 @@ where
     Value::List(Box::new(list))
 }
 
+/// Convert a sequence of elements into a value map under their element name.
+pub(crate) fn list_value_under<E>(items: Vec<E>) -> Value
+where
+    E: Element + Into<Value>,
+{
+    let value = list_value(items);
+    if value == Value::Empty {
+        return Value::Empty;
+    }
+
+    let mut map = ValueMap::new();
+    map.insert::<E>(value);
+    Value::Map(map)
+}
+
 type InnerValueMap = IndexMap<ElementName<ByteString>, Value>;
 
 /// A mapping from tag names to [`Value`]s.
@@ -289,7 +304,8 @@ impl ValueMap {
         self.0.iter()
     }
 
-    pub(crate) fn insert_raw(&mut self, key: ElementName<ByteString>, value: Value) {
+    /// Append a raw child value, grouping duplicate names into a list.
+    pub fn insert_raw(&mut self, key: ElementName<ByteString>, value: Value) {
         match self.0.get_mut(&key) {
             Some(Value::List(list)) => list.push(value),
             Some(old_value) => {
