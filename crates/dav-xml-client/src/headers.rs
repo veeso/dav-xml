@@ -76,6 +76,12 @@ mod tests {
     fn header_of(timeouts: Vec<Timeout>) -> TimeoutHeader {
         TimeoutHeader(timeouts)
     }
+
+    #[test]
+    fn timeout_header_rejects_garbage_and_reports_the_original_value() {
+        let error = "Second-abc".parse::<TimeoutHeader>().unwrap_err();
+        assert_eq!(error.to_string(), "invalid Timeout header: Second-abc");
+    }
 }
 
 use std::fmt::Display;
@@ -86,21 +92,86 @@ use dav_xml::properties::ETag;
 use http::HeaderName;
 
 /// `DAV` (section 10.1).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::DAV;
+///
+/// assert_eq!(DAV.as_str(), "dav");
+/// ```
 pub const DAV: HeaderName = HeaderName::from_static("dav");
 /// `Depth` (section 10.2).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::DEPTH;
+///
+/// assert_eq!(DEPTH.as_str(), "depth");
+/// ```
 pub const DEPTH: HeaderName = HeaderName::from_static("depth");
 /// `Destination` (section 10.3).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::DESTINATION;
+///
+/// assert_eq!(DESTINATION.as_str(), "destination");
+/// ```
 pub const DESTINATION: HeaderName = HeaderName::from_static("destination");
 /// `If` (section 10.4).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::IF;
+///
+/// assert_eq!(IF.as_str(), "if");
+/// ```
 pub const IF: HeaderName = HeaderName::from_static("if");
 /// `Lock-Token` (section 10.5).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::LOCK_TOKEN;
+///
+/// assert_eq!(LOCK_TOKEN.as_str(), "lock-token");
+/// ```
 pub const LOCK_TOKEN: HeaderName = HeaderName::from_static("lock-token");
 /// `Overwrite` (section 10.6).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::OVERWRITE;
+///
+/// assert_eq!(OVERWRITE.as_str(), "overwrite");
+/// ```
 pub const OVERWRITE: HeaderName = HeaderName::from_static("overwrite");
 /// `Timeout` (section 10.7).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::TIMEOUT;
+///
+/// assert_eq!(TIMEOUT.as_str(), "timeout");
+/// ```
 pub const TIMEOUT: HeaderName = HeaderName::from_static("timeout");
 
 /// A header value that does not follow the RFC grammar.
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::Overwrite;
+///
+/// let error = "maybe".parse::<Overwrite>().unwrap_err();
+/// assert_eq!(error.to_string(), "invalid Overwrite header: maybe");
+/// ```
 #[derive(Debug, thiserror::Error)]
 #[error("invalid {header} header: {value}")]
 pub struct InvalidHeader {
@@ -152,6 +223,18 @@ impl FromStr for Overwrite {
 }
 
 /// One condition inside an [`IfList`].
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::IfCondition;
+///
+/// let condition = IfCondition::Token {
+///     token: "urn:x".to_owned(),
+///     not: false,
+/// };
+/// assert_eq!(condition, IfCondition::Token { token: "urn:x".to_owned(), not: false });
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum IfCondition {
     /// A state token, usually a lock token.
@@ -172,6 +255,15 @@ pub enum IfCondition {
 
 /// One parenthesised list of an [`If`] header, optionally tagged with a
 /// resource.
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::{If, IfList};
+///
+/// let header = If::new().with_list(IfList::untagged().token("urn:x"));
+/// assert_eq!(header.to_string(), "(<urn:x>)");
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct IfList {
     resource: Option<http::Uri>,
@@ -317,6 +409,16 @@ impl Display for If {
 }
 
 /// `Lock-Token` header value ([RFC 4918 section 10.5](https://www.rfc-editor.org/rfc/rfc4918#section-10.5)): a coded URL `<token>`.
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::LockTokenHeader;
+///
+/// let token: LockTokenHeader = "<urn:x>".parse().unwrap();
+/// assert_eq!(token.0, "urn:x");
+/// assert_eq!(token.to_string(), "<urn:x>");
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LockTokenHeader(
     /// The token, without the enclosing `<` `>` coded-URL delimiters.
@@ -350,6 +452,15 @@ impl FromStr for LockTokenHeader {
 }
 
 /// `DAV` response header ([RFC 4918 section 10.1](https://www.rfc-editor.org/rfc/rfc4918#section-10.1)): the compliance classes a server advertises.
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml_client::headers::DavHeader;
+///
+/// let dav: DavHeader = "1, 2, 3, extended-mkcol".parse().unwrap();
+/// assert!(dav.supports_locking());
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DavHeader {
     /// The compliance classes, e.g. `"1"`, `"2"`, `"3"`, `"extended-mkcol"`.
@@ -380,6 +491,16 @@ impl FromStr for DavHeader {
 }
 
 /// `Timeout` request header ([RFC 4918 section 10.7](https://www.rfc-editor.org/rfc/rfc4918#section-10.7)): one or more requested timeouts, in decreasing order of preference.
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::Timeout;
+/// use dav_xml_client::headers::TimeoutHeader;
+///
+/// let header = TimeoutHeader(vec![Timeout::Seconds(600), Timeout::Infinite]);
+/// assert_eq!(header.to_string(), "Second-600, Infinite");
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TimeoutHeader(
     /// The requested timeouts, in decreasing order of preference.
@@ -406,9 +527,9 @@ impl FromStr for TimeoutHeader {
             .split(',')
             .map(str::trim)
             .map(|segment| {
-                segment.parse::<Timeout>().map_err(|error| InvalidHeader {
+                segment.parse::<Timeout>().map_err(|_error| InvalidHeader {
                     header: "Timeout",
-                    value: format!("{segment}: {error}"),
+                    value: s.to_owned(),
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
