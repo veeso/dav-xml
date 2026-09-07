@@ -12,7 +12,7 @@ use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
 
 use crate::element::{Element, ElementExt, ElementName};
 use crate::elements::DavError;
-use crate::{DAV_NAMESPACE, Error, Result, Value};
+use crate::{ContentItem, DAV_NAMESPACE, Error, Result, Value};
 
 pub(crate) fn write_xml<E: Element>(writer: impl std::io::Write, value: Value) -> Result<()> {
     let name = E::element_name();
@@ -39,6 +39,14 @@ fn validate_value(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
             map.iter()
                 .try_for_each(|(child, value)| validate_value(child, value))
         }
+        Value::Mixed(items) => items.iter().try_for_each(validate_content_item),
+    }
+}
+
+fn validate_content_item(item: &ContentItem) -> Result<()> {
+    match item {
+        ContentItem::Text(_) => Ok(()),
+        ContentItem::Element { name, value } => validate_value(name, value),
     }
 }
 
@@ -103,6 +111,13 @@ impl<W: std::io::Write> XmlWriter<W> {
                     self.collect_namespaces(child, value);
                 }
             }
+            Value::Mixed(items) => {
+                for item in items {
+                    if let ContentItem::Element { name, value } = item {
+                        self.collect_namespaces(name, value);
+                    }
+                }
+            }
         }
     }
 
@@ -154,6 +169,12 @@ impl<W: std::io::Write> XmlWriter<W> {
                 self.inner
                     .write_event(Event::End(BytesEnd::new(raw_name)))?;
             }
+            Value::Mixed(items) => {
+                self.inner.write_event(Event::Start(start))?;
+                self.write_mixed(&items)?;
+                self.inner
+                    .write_event(Event::End(BytesEnd::new(raw_name)))?;
+            }
             Value::List(_) => {
                 return Err(Error::InvalidValueType {
                     element: E::LOCAL_NAME,
@@ -191,6 +212,34 @@ impl<W: std::io::Write> XmlWriter<W> {
                 self.inner
                     .write_event(Event::End(BytesEnd::new(raw_name)))?;
             }
+            Value::Mixed(items) => {
+                self.inner
+                    .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                self.write_mixed(items)?;
+                self.inner
+                    .write_event(Event::End(BytesEnd::new(raw_name)))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_content_item(&mut self, item: &ContentItem) -> Result<()> {
+        match item {
+            ContentItem::Text(text) => self.inner.write_event(Event::Text(BytesText::new(text)))?,
+            ContentItem::Element { name, value } => self.write_value(name, value)?,
+        }
+        Ok(())
+    }
+
+    fn write_mixed(&mut self, items: &[ContentItem]) -> Result<()> {
+        if matches!(items.first(), Some(ContentItem::Element { .. })) {
+            self.inner.write_event(Event::Text(BytesText::new("")))?;
+        }
+        for item in items {
+            self.write_content_item(item)?;
+        }
+        if matches!(items.last(), Some(ContentItem::Element { .. })) {
+            self.inner.write_event(Event::Text(BytesText::new("")))?;
         }
         Ok(())
     }

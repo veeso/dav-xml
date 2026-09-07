@@ -21,7 +21,7 @@ use bytes::{BufMut, Bytes};
 
 pub use self::element::{Element, ElementName};
 pub use self::error::{Error, Result};
-pub use self::value::{Value, ValueMap};
+pub use self::value::{ContentItem, Value, ValueMap};
 
 /// The `DAV:` namespace URI.
 ///
