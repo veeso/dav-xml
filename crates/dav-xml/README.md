@@ -1,5 +1,9 @@
 # dav-xml
 
+[![Crates.io](https://img.shields.io/crates/v/dav-xml.svg?logo=rust)](https://crates.io/crates/dav-xml)
+[![Downloads](https://img.shields.io/crates/d/dav-xml.svg?logo=rust)](https://crates.io/crates/dav-xml)
+[![Docs](https://docs.rs/dav-xml/badge.svg)](https://docs.rs/dav-xml)
+
 `WebDAV` ([RFC 4918](https://www.rfc-editor.org/rfc/rfc4918)) XML elements,
 properties and (de)serialization for Rust.
 

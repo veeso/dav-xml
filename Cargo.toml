@@ -24,7 +24,7 @@ nonempty = "0.12"
 pretty_assertions = "1"
 quick-xml = "0.42"
 reqwest = { version = "0.13", default-features = false }
-serial_test = "3"
+serial_test = "4"
 thiserror = "2"
 time = "0.3"
 tokio = "1"

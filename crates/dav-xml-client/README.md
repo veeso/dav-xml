@@ -1,5 +1,9 @@
 # dav-xml-client
 
+[![Crates.io](https://img.shields.io/crates/v/dav-xml-client.svg?logo=rust)](https://crates.io/crates/dav-xml-client)
+[![Downloads](https://img.shields.io/crates/d/dav-xml-client.svg?logo=rust)](https://crates.io/crates/dav-xml-client)
+[![Docs](https://docs.rs/dav-xml-client/badge.svg)](https://docs.rs/dav-xml-client)
+
 Minimal sync and async `WebDAV` ([RFC 4918](https://www.rfc-editor.org/rfc/rfc4918))
 client for Rust, built on top of the `dav-xml` crate. `DavClient` (sync) and
 `AsyncDavClient` (async) share one method set, one error type, and one
