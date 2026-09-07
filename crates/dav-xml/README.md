@@ -23,6 +23,22 @@ for response in &multistatus.response {
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
+## RFC 4918 coverage
+
+| Section | Items                              | Status |
+| ------- | ---------------------------------- | ------ |
+| 14      | All 30 XML elements                | Full   |
+| 15      | All 10 live properties             | Full   |
+| 16      | All 7 pre- and postcondition codes | Full   |
+
+### Not covered
+
+- RFC 3744
+- RFC 4331
+- RFC 3253
+- `CalDAV`
+- `CardDAV`
+
 ## Custom properties
 
 Implement `Element`, `TryFrom<&Value>` and `Into<Value>` for custom `WebDAV`
