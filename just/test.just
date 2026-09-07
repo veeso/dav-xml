@@ -12,7 +12,7 @@ coverage output="lcov.info" args="":
 # Start the WebDAV container the `containers` tests connect to.
 [group('test')]
 containers_up:
-  docker compose -f tests/docker-compose.yml up -d
+  docker compose -f tests/docker-compose.yml up -d --wait
 
 # Stop and remove the WebDAV test container.
 [group('test')]

@@ -8,3 +8,16 @@ services:
       AUTH_TYPE: Basic
       USERNAME: alice
       PASSWORD: secret1234
+    healthcheck:
+      # `wget` is the only HTTP client this image ships (no `curl`); embed
+      # the configured credentials so a `401` from an as-yet-unready server
+      # does not read as `healthy`.
+      test:
+        [
+          "CMD-SHELL",
+          "wget --spider -q \"http://$$USERNAME:$$PASSWORD@localhost/\" || exit 1",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
