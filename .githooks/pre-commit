@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# Run the repository quality gates before recording a commit.
+
+set -euo pipefail
+
+fail() {
+    echo "pre-commit: $1" >&2
+    exit 1
+}
+
+command -v just >/dev/null 2>&1 || fail "just not found; install it to run the pre-commit checks"
+
+repository_root="$(git rev-parse --show-toplevel)"
+cd "$repository_root"
+
+if ! git diff --cached --quiet --diff-filter=ACMR; then
+    command -v trufflehog >/dev/null 2>&1 || fail "trufflehog not found; install it or commit with --no-verify"
+    staged_directory="$(mktemp -d "${TMPDIR:-/tmp}/rust-template-pre-commit.XXXXXX")"
+    trap 'rm -rf "$staged_directory"' EXIT
+
+    git checkout-index --all --prefix="$staged_directory/"
+    echo "pre-commit: scanning the staged repository snapshot for secrets"
+    just scan_secrets "$staged_directory"
+fi
+
+echo "pre-commit: checking formatting"
+just fmt_check
+
+echo "pre-commit: running Clippy"
+just clippy "-- -D warnings"
+
+echo "pre-commit: checking dependency policy"
+just deny
+
+echo "pre-commit: all checks passed"

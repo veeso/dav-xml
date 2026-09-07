@@ -1,0 +1,26 @@
+/target/
+
+# Coverage
+/coverage/
+/lcov.info
+*.profraw
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Editors and IDEs
+/.idea/
+/.vscode/
+.project
+*.swp
+
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Local agent state
+/docs/superpowers/
+/.superpowers/
+/.claude/plans/
