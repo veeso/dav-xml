@@ -17,6 +17,7 @@
 
 pub use dav_xml::DAV_NAMESPACE;
 
+pub mod async_client;
 pub mod auth;
 pub mod capabilities;
 pub mod client;
@@ -27,6 +28,8 @@ pub mod resource;
 pub(crate) mod response;
 pub mod transport;
 
+#[doc(inline)]
+pub use async_client::AsyncDavClient;
 #[doc(inline)]
 pub use auth::Auth;
 #[doc(inline)]
