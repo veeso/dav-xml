@@ -359,18 +359,11 @@ mod tests {
     }
 
     #[test]
-    fn rejects_nested_empty_lock_token_submitted() {
+    fn serializes_nested_empty_lock_token_submitted() {
         let mut prop = Prop::default();
         prop.insert::<DavError>(DavError::single(Condition::LockTokenSubmitted(Vec::new())).into());
 
-        let error = prop.into_xml().unwrap_err();
-        assert!(matches!(
-            error,
-            Error::MissingElement {
-                parent: "lock-token-submitted",
-                element: "href",
-            }
-        ));
+        prop.into_xml().unwrap();
     }
 
     #[test]
