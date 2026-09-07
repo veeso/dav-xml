@@ -345,34 +345,11 @@ fn property_value(items: Vec<ContentItem>) -> Value {
         return Value::Mixed(items);
     }
 
-    let Some(first_element) = items
+    if items
         .iter()
-        .position(|item| matches!(item, ContentItem::Element { .. }))
-    else {
-        return Value::Map(ValueMap::new());
-    };
-    let Some(last_element) = items
-        .iter()
-        .rposition(|item| matches!(item, ContentItem::Element { .. }))
-    else {
-        return Value::Map(ValueMap::new());
-    };
-    let has_internal_text = items[first_element..=last_element]
-        .iter()
-        .any(|item| matches!(item, ContentItem::Text(_)));
-
-    if has_internal_text {
-        Value::Mixed(
-            items
-                .into_iter()
-                .enumerate()
-                .filter_map(|(index, item)| {
-                    (first_element..=last_element)
-                        .contains(&index)
-                        .then_some(item)
-                })
-                .collect(),
-        )
+        .any(|item| matches!(item, ContentItem::Text(_)))
+    {
+        Value::Mixed(items)
     } else {
         mixed_value(
             items

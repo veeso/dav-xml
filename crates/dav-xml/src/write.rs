@@ -184,7 +184,7 @@ impl<W: std::io::Write> XmlWriter<W> {
             }
             Value::Map(map) => {
                 self.inner.write_event(Event::Start(start))?;
-                if is_owner_name(name) {
+                if is_owner_name(name) || is_prop_name(name) {
                     for (child, value) in map.iter_ordered() {
                         self.write_value_without_indent(child, value)?;
                     }
@@ -242,11 +242,18 @@ impl<W: std::io::Write> XmlWriter<W> {
             Value::Map(map) => {
                 self.inner
                     .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
-                for (child, value) in map.iter_ordered() {
-                    self.write_value(child, value)?;
+                if is_prop_name(name) {
+                    for (child, value) in map.iter_ordered() {
+                        self.write_value_without_indent(child, value)?;
+                    }
+                    self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+                } else {
+                    for (child, value) in map.iter_ordered() {
+                        self.write_value(child, value)?;
+                    }
+                    self.inner
+                        .write_event(Event::End(BytesEnd::new(raw_name)))?;
                 }
-                self.inner
-                    .write_event(Event::End(BytesEnd::new(raw_name)))?;
             }
             Value::Mixed(items) => {
                 self.inner
