@@ -16,7 +16,7 @@ pub enum PropertyUpdateItem {
     Remove(Remove),
 }
 
-/// The `propertyupdate` XML element as defined in [RFC 4918 section 14.20](https://www.rfc-editor.org/rfc/rfc4918#section-14.20).
+/// The `propertyupdate` XML element as defined in [RFC 4918 section 14.19](https://www.rfc-editor.org/rfc/rfc4918#section-14.19).
 ///
 /// # Examples
 ///
@@ -36,6 +36,17 @@ impl Element for PropertyUpdate {
     const NAMESPACE: &'static str = DAV_NAMESPACE;
     const PREFIX: &'static str = DAV_PREFIX;
     const LOCAL_NAME: &'static str = "propertyupdate";
+
+    fn validate(&self) -> crate::Result<()> {
+        if self.0.is_empty() {
+            return Err(Error::MissingElement {
+                parent: Self::LOCAL_NAME,
+                element: "set or remove",
+            });
+        }
+
+        Ok(())
+    }
 }
 
 impl PropertyUpdate {
@@ -199,6 +210,18 @@ mod tests {
             br#"<D:propertyupdate xmlns:D="DAV:"> </D:propertyupdate>"#.to_vec(),
         )
         .unwrap_err();
+        assert!(matches!(
+            error,
+            Error::MissingElement {
+                parent: "propertyupdate",
+                element: "set or remove",
+            }
+        ));
+    }
+
+    #[test]
+    fn empty_update_is_rejected_during_serialization() {
+        let error = PropertyUpdate::new().into_xml().unwrap_err();
         assert!(matches!(
             error,
             Error::MissingElement {
