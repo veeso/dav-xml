@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<D:prop xmlns:D="DAV:">
+  <D:lockdiscovery>
+    <D:activelock>
+      <D:lockscope><D:exclusive/></D:lockscope>
+      <D:locktype><D:write/></D:locktype>
+      <D:depth>infinity</D:depth>
+      <D:timeout>Second-3600</D:timeout>
+      <D:locktoken><D:href>opaquelocktoken:7d4a5c26-1229-4e55-ae5a-0476d7b6dfd4</D:href></D:locktoken>
+      <D:lockroot><D:href>/webdav/locked.txt</D:href></D:lockroot>
+    </D:activelock>
+  </D:lockdiscovery>
+</D:prop>

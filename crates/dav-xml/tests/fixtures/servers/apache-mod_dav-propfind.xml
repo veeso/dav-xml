@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:ns0="DAV:">
+  <D:response xmlns:lp2="http://apache.org/dav/props/" xmlns:lp1="DAV:">
+    <D:href>/ciao/</D:href>
+    <D:propstat>
+      <D:prop>
+        <lp1:resourcetype><D:collection/></lp1:resourcetype>
+        <lp1:creationdate>2024-03-02T15:44:46Z</lp1:creationdate>
+        <lp1:getlastmodified>Sat, 02 Mar 2024 15:44:46 GMT</lp1:getlastmodified>
+        <lp1:getetag>"1a-612af5f3d72b2"</lp1:getetag>
+        <D:supportedlock>
+          <D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
+          <D:lockentry><D:lockscope><D:shared/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
+        </D:supportedlock>
+        <D:lockdiscovery/>
+        <D:getcontenttype>httpd/unix-directory</D:getcontenttype>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response xmlns:lp2="http://apache.org/dav/props/" xmlns:lp1="DAV:">
+    <D:href>/ciao/pippo/</D:href>
+    <D:propstat>
+      <D:prop>
+        <lp1:resourcetype><D:collection/></lp1:resourcetype>
+        <lp1:creationdate>2024-03-02T15:40:53Z</lp1:creationdate>
+        <lp1:getlastmodified>Sat, 02 Mar 2024 15:40:53 GMT</lp1:getlastmodified>
+        <lp1:getetag>"0-612af5150498f"</lp1:getetag>
+        <D:supportedlock>
+          <D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
+          <D:lockentry><D:lockscope><D:shared/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
+        </D:supportedlock>
+        <D:lockdiscovery/>
+        <D:getcontenttype>httpd/unix-directory</D:getcontenttype>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response xmlns:lp2="http://apache.org/dav/props/" xmlns:lp1="DAV:">
+    <D:href>/ciao/build.rs</D:href>
+    <D:propstat>
+      <D:prop>
+        <lp1:resourcetype/>
+        <lp1:creationdate>2024-03-02T15:44:46Z</lp1:creationdate>
+        <lp1:getcontentlength>486</lp1:getcontentlength>
+        <lp1:getlastmodified>Sat, 02 Mar 2024 15:44:46 GMT</lp1:getlastmodified>
+        <lp1:getetag>"1e6-612af5f3d72b2"</lp1:getetag>
+        <lp2:executable>F</lp2:executable>
+        <D:supportedlock>
+          <D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
+          <D:lockentry><D:lockscope><D:shared/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
+        </D:supportedlock>
+        <D:lockdiscovery/>
+        <D:getcontenttype>application/rls-services+xml</D:getcontenttype>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>

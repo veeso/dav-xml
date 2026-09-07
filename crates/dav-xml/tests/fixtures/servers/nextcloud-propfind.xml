@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns" xmlns:oc="http://owncloud.org/ns" xmlns:nc="http://nextcloud.org/ns">
+  <d:response>
+    <d:href>/remote.php/dav/files/alice/Documents/</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype><d:collection/></d:resourcetype>
+        <d:getetag>"e0d123"</d:getetag>
+        <d:quota-used-bytes>1024</d:quota-used-bytes>
+        <oc:permissions>RDNVCK</oc:permissions>
+        <oc:size>2048</oc:size>
+        <nc:has-preview>false</nc:has-preview>
+        <s:share-types/>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+    <d:propstat>
+      <d:prop><d:getcontentlength/></d:prop>
+      <d:status>HTTP/1.1 404 Not Found</d:status>
+    </d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/remote.php/dav/files/alice/Documents/report.txt</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:resourcetype/>
+        <d:getcontentlength>42</d:getcontentlength>
+        <d:getetag>"e0d124"</d:getetag>
+        <oc:permissions>RDNVW</oc:permissions>
+        <oc:size>42</oc:size>
+        <nc:has-preview>true</nc:has-preview>
+        <s:share-types><s:share-type>0</s:share-type></s:share-types>
+      </d:prop>
+      <d:status>HTTP/1.1 200 OK</d:status>
+    </d:propstat>
+    <d:propstat>
+      <d:prop><d:quota-used-bytes/></d:prop>
+      <d:status>HTTP/1.1 404 Not Found</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
