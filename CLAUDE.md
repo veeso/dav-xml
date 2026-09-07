@@ -62,10 +62,11 @@ that will consume it.
   `Transport`/`AsyncTransport` abstraction.
 - **`dav-xml-client` feature matrix.** Each HTTP backend is gated behind a
   Cargo feature: `reqwest` (async, `tokio`, default), `ureq` (blocking, no
-  runtime), `isahc` (libcurl, sync or async), `native-tls` and `rustls`
-  (TLS passthrough for `reqwest`/`ureq` only — `isahc` always bundles its own
-  `default-tls`), `mock` (`transport::MockTransport` for downstream tests),
-  and `containers` (Docker-backed integration tests, pulls in `mock`).
+  runtime), `isahc` (libcurl, sync or async), `native-tls` (forces the
+  native TLS backend for `reqwest`/`ureq`; `isahc` always bundles its own
+  `default-tls`), `rustls` (a no-op — `reqwest` and `ureq` already default to
+  rustls), `mock` (`transport::MockTransport` for downstream tests), and
+  `containers` (Docker-backed integration tests, pulls in `mock`).
   Building with `isahc` — including any `--all-features` build — compiles
   `curl-sys` from source and requires a C toolchain (`cc`, `make`) on the
   machine; GitHub-hosted CI runners have one preinstalled.

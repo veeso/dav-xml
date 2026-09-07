@@ -96,13 +96,18 @@ downstream crates only build the dependencies they need:
 | `reqwest`    | `AsyncDavClient::reqwest`, an async backend for `tokio`.                   | yes     |
 | `ureq`       | `DavClient::ureq`, a blocking backend with no async runtime.               | no      |
 | `isahc`      | `DavClient::isahc` and `AsyncDavClient::isahc`, libcurl for sync or async. | no      |
-| `native-tls` | Platform TLS for the `reqwest` and `ureq` backends.                        | no      |
-| `rustls`     | rustls for the `reqwest` and `ureq` backends.                              | no      |
+| `native-tls` | Switches the `reqwest` and `ureq` backends to the platform TLS stack.      | no      |
+| `rustls`     | No-op: `reqwest` and `ureq` already default to rustls (see below).         | no      |
 | `mock`       | `transport::MockTransport`, for downstream tests.                          | no      |
 | `containers` | Docker-backed integration tests in `tests/containers.rs`; pulls in `mock`. | no      |
 
-`isahc` always builds with its own bundled `default-tls`; `native-tls` and
-`rustls` only affect `reqwest` and `ureq`.
+`isahc` always builds with its own bundled `default-tls`, unaffected by
+`native-tls` or `rustls`. For `reqwest` and `ureq`, rustls is already the
+default (`reqwest`'s own `default-tls` feature resolves to rustls, and
+`ureq`'s `TlsProvider` defaults to rustls too), so this crate's `rustls`
+feature does nothing; enable `native-tls` to force the native TLS backend
+for both instead. Enabling both `native-tls` and `rustls` together (as
+`--all-features` does) resolves to `native-tls`.
 
 Building `dav-xml-client` with the `isahc` feature (including any
 `--all-features` build) compiles `curl-sys` from source and requires a C

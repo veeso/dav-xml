@@ -12,8 +12,9 @@ use super::{AsyncTransport, Transport, TransportError, TransportErrorKind};
 /// A client that follows no redirects (`WebDAV` clients must see `3xx`
 /// themselves).
 ///
-/// This only differs from [`isahc::HttpClient::new`] by its redirect
-/// policy; every other setting keeps `isahc`'s defaults.
+/// `isahc`'s own default redirect policy is already to follow none, so this
+/// only differs from [`isahc::HttpClient::new`] by making that policy
+/// explicit; every other setting keeps `isahc`'s defaults.
 ///
 /// # Errors
 ///

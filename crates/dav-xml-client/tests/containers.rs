@@ -167,5 +167,5 @@ macro_rules! async_suite {
     };
 }
 
-async_suite!(reqwest, "reqwest", AsyncDavClient::reqwest(auth()));
+async_suite!(reqwest, "reqwest", AsyncDavClient::reqwest(auth()).unwrap());
 async_suite!(isahc_async, "isahc", AsyncDavClient::isahc(auth()).unwrap());

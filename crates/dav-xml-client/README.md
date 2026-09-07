@@ -14,13 +14,18 @@ enable one of the built-in backends behind a Cargo feature.
 | `reqwest`    | `AsyncDavClient::reqwest`, an async backend for `tokio`.                               | ✔       |
 | `ureq`       | `DavClient::ureq`, a blocking backend with no async runtime.                           |         |
 | `isahc`      | `DavClient::isahc` and `AsyncDavClient::isahc`, libcurl for either sync or async code. |         |
-| `native-tls` | Platform TLS for the `reqwest` and `ureq` backends.                                    |         |
-| `rustls`     | rustls for the `reqwest` and `ureq` backends.                                          |         |
+| `native-tls` | Switches the `reqwest` and `ureq` backends to the platform TLS stack.                  |         |
+| `rustls`     | No-op: `reqwest` and `ureq` already default to rustls (see below).                     |         |
 | `mock`       | `transport::MockTransport`, for downstream tests.                                      |         |
 | `containers` | Docker-backed integration tests (`tests/containers.rs`); pulls in `mock`.              |         |
 
-`isahc` always builds with its own bundled `default-tls`; `native-tls` and
-`rustls` only affect `reqwest` and `ureq`.
+`isahc` always builds with its own bundled `default-tls`, unaffected by
+`native-tls` or `rustls`. For `reqwest` and `ureq`, rustls is already the
+default (`reqwest`'s own `default-tls` feature resolves to rustls, and
+`ureq`'s `TlsProvider` defaults to rustls too), so this crate's `rustls`
+feature does nothing; enable `native-tls` to force the native TLS backend
+for both instead. Enabling both `native-tls` and `rustls` together (as
+`--all-features` does) resolves to `native-tls`.
 
 ## Choosing a backend
 
@@ -63,7 +68,7 @@ if !client.exists("https://dav.example.com/file.txt")? {
 # async fn main() -> Result<(), dav_xml_client::Error> {
 use dav_xml_client::{AsyncDavClient, Auth};
 
-let client = AsyncDavClient::reqwest(Auth::basic("alice", "secret"));
+let client = AsyncDavClient::reqwest(Auth::basic("alice", "secret"))?;
 for resource in client.list("https://dav.example.com/dir/").await? {
     println!("{path}", path = resource.path());
 }
@@ -121,8 +126,9 @@ client.delete("https://dav.example.com/file.txt")?;
 
 A lock is refreshed with `refresh_lock(url, &LockTokenHeader,
 Option<Timeout>)`, which reissues `LOCK` without a body (section 9.10.2).
-`list(url)`, `stat(url)`, and `exists(url)` are convenience helpers built on
-`propfind` and are not RFC methods in their own right.
+`list(url)` and `stat(url)` are convenience helpers built on `propfind`;
+`exists(url)` is built on `head`. None of the three are RFC methods in their
+own right.
 
 `delete`, `copy`, and `mv` return `()` on success; a `207 Multi-Status`
 response listing per-resource failures surfaces as `Error::Multistatus`. A
@@ -147,6 +153,12 @@ dav-xml-client = "0.1" # async client, reqwest backend (default)
 [dependencies]
 dav-xml-client = { version = "0.1", default-features = false, features = ["ureq"] } # blocking client
 ```
+
+Most `DavClient`/`AsyncDavClient` methods take `dav-xml` types (`Depth`,
+`PropFind`, `LockInfo`, `Timeout`, ...). `dav-xml-client` re-exports the
+whole crate as `dav_xml_client::dav_xml`, so `use dav_xml_client::dav_xml::elements::Depth;`
+works without adding `dav-xml` as a separate dependency; depend on `dav-xml`
+directly instead if you prefer importing it at its own path.
 
 ## License
 

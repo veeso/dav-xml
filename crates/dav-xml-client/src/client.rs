@@ -1027,10 +1027,23 @@ impl DavClient<ureq::Agent> {
 
     /// A client over a caller-configured [`ureq::Agent`].
     ///
-    /// Configure `agent` with `http_status_as_error(false)` (see
-    /// [`ureq::config::ConfigBuilder::http_status_as_error`]), or every
-    /// `4xx`/`5xx` response becomes a transport error instead of a value
-    /// this client can inspect.
+    /// Configure `agent` with the same three settings
+    /// [`crate::transport::ureq::default_agent`] applies, or the affected
+    /// verbs and status codes silently misbehave:
+    ///
+    /// - `http_status_as_error(false)` (see
+    ///   [`ureq::config::ConfigBuilder::http_status_as_error`]), or every
+    ///   `4xx`/`5xx` response becomes a transport error instead of a value
+    ///   this client can inspect.
+    /// - `max_redirects(0)` (see
+    ///   [`ureq::config::ConfigBuilder::max_redirects`]), or `3xx` responses
+    ///   are resolved by `ureq` instead of reaching this client (`WebDAV`
+    ///   clients must see `3xx` themselves).
+    /// - `allow_non_standard_methods(true)` (see
+    ///   [`ureq::config::ConfigBuilder::allow_non_standard_methods`]), or
+    ///   `ureq` rejects `MKCOL`, `PROPFIND`, `PROPPATCH`, `COPY`, `MOVE`,
+    ///   `LOCK`, and `UNLOCK` outright before the request is sent, regardless
+    ///   of HTTP version.
     ///
     /// # Examples
     ///
