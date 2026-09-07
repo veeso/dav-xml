@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::convert::Infallible;
 use std::str::FromStr;
 
 use bytestring::ByteString;
@@ -71,10 +70,7 @@ impl TryFrom<&Value> for Href {
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         let value = value.as_str_of::<Self>()?;
-        match value.parse() {
-            Ok(href) => Ok(href),
-            Err(never) => match never {},
-        }
+        value.parse().map_err(Error::invalid::<Self>)
     }
 }
 
@@ -91,11 +87,108 @@ impl From<http::Uri> for Href {
 }
 
 impl FromStr for Href {
-    type Err = Infallible;
+    type Err = http::uri::InvalidUri;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(http::Uri::from_str(s).map_or_else(|_| Self::Raw(s.into()), Self::Uri))
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match http::Uri::from_str(value) {
+            Ok(uri) => Ok(Self::Uri(uri)),
+            Err(error) => {
+                if is_valid_opaque_uri(value) {
+                    Ok(Self::Raw(value.into()))
+                } else {
+                    Err(error)
+                }
+            }
+        }
     }
+}
+
+fn is_valid_opaque_uri(value: &str) -> bool {
+    let Some((scheme, remainder)) = value.split_once(':') else {
+        return false;
+    };
+    if !is_valid_scheme(scheme) {
+        return false;
+    }
+
+    let path_end = if let Some(index) = remainder.find(['?', '#']) {
+        index
+    } else {
+        remainder.len()
+    };
+    let path = &remainder[..path_end];
+    if path.is_empty() || path.starts_with('/') || !is_valid_uri_component(path) {
+        return false;
+    }
+
+    let suffix = &remainder[path_end..];
+    match suffix.strip_prefix('?') {
+        Some(query_and_fragment) => match query_and_fragment.split_once('#') {
+            Some((query, fragment)) => {
+                is_valid_uri_component(query) && is_valid_uri_component(fragment)
+            }
+            None => is_valid_uri_component(query_and_fragment),
+        },
+        None => match suffix.strip_prefix('#') {
+            Some(fragment) => is_valid_uri_component(fragment),
+            None => true,
+        },
+    }
+}
+
+fn is_valid_scheme(value: &str) -> bool {
+    let mut bytes = value.bytes();
+    match bytes.next() {
+        Some(first) if first.is_ascii_alphabetic() => {}
+        _ => return false,
+    }
+    bytes.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'-' | b'.'))
+}
+
+fn is_valid_uri_component(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'%' => {
+                let Some(percent_encoded) = bytes.get(index + 1..index + 3) else {
+                    return false;
+                };
+                if !percent_encoded.iter().all(u8::is_ascii_hexdigit) {
+                    return false;
+                }
+                index += 3;
+            }
+            byte if is_uri_character(byte) => index += 1,
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn is_uri_character(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric()
+        || matches!(
+            byte,
+            b'-' | b'.'
+                | b'_'
+                | b'~'
+                | b'!'
+                | b'$'
+                | b'&'
+                | b'\''
+                | b'('
+                | b')'
+                | b'*'
+                | b'+'
+                | b','
+                | b';'
+                | b'='
+                | b':'
+                | b'@'
+                | b'/'
+                | b'?'
+        )
 }
 
 #[cfg(test)]
@@ -141,6 +234,17 @@ mod tests {
             Href::from_xml(href.clone().into_xml().unwrap()).unwrap(),
             href
         );
+    }
+
+    #[test]
+    fn rejects_spaces_and_malformed_percent_escapes() {
+        for text in [
+            "https://example.org/a b",
+            "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4%2",
+            "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4%zz",
+        ] {
+            Href::from_str(text).unwrap_err();
+        }
     }
 
     #[test]
