@@ -2,31 +2,14 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
-
-/// The `allprop` XML element as defined in RFC 4918 section 14.2.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct AllProp;
-
-impl Element for AllProp {
-    const NAMESPACE: &'static str = DAV_NAMESPACE;
-    const PREFIX: &'static str = DAV_PREFIX;
-    const LOCAL_NAME: &'static str = "allprop";
-}
-
-impl TryFrom<&Value> for AllProp {
-    type Error = Error;
-
-    fn try_from(_: &Value) -> Result<Self, Self::Error> {
-        Ok(Self)
-    }
-}
-
-impl From<AllProp> for Value {
-    fn from(_: AllProp) -> Value {
-        Value::Empty
-    }
-}
+unit_element!(
+    /// The `allprop` XML element
+    /// ([RFC 4918 section 14.2](https://www.rfc-editor.org/rfc/rfc4918#section-14.2)).
+    ///
+    /// Requests all properties of a resource.
+    AllProp,
+    "allprop"
+);
 
 #[cfg(test)]
 mod tests {

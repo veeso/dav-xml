@@ -2,31 +2,14 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
-
-/// The `propname` XML element as defined in RFC 4918 section 14.21.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct PropName;
-
-impl Element for PropName {
-    const NAMESPACE: &'static str = DAV_NAMESPACE;
-    const PREFIX: &'static str = DAV_PREFIX;
-    const LOCAL_NAME: &'static str = "propname";
-}
-
-impl TryFrom<&Value> for PropName {
-    type Error = Error;
-
-    fn try_from(_: &Value) -> Result<Self, Self::Error> {
-        Ok(Self)
-    }
-}
-
-impl From<PropName> for Value {
-    fn from(_: PropName) -> Value {
-        Value::Empty
-    }
-}
+unit_element!(
+    /// The `propname` XML element
+    /// ([RFC 4918 section 14.21](https://www.rfc-editor.org/rfc/rfc4918#section-14.21)).
+    ///
+    /// Requests the names of the properties of a resource.
+    PropName,
+    "propname"
+);
 
 #[cfg(test)]
 mod tests {
