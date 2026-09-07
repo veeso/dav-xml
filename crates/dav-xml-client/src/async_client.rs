@@ -1106,3 +1106,51 @@ impl<T: AsyncTransport> AsyncDavClient<T> {
         }
     }
 }
+
+#[cfg(feature = "reqwest")]
+impl AsyncDavClient<reqwest::Client> {
+    /// A client over [`crate::transport::reqwest::default_client`], which
+    /// follows no redirects.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// use dav_xml_client::{AsyncDavClient, Auth};
+    ///
+    /// let client = AsyncDavClient::reqwest(Auth::basic("alice", "secret"));
+    /// let exists = client.exists("https://example.com/file").await.unwrap();
+    /// # let _ = exists;
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn reqwest(auth: Auth) -> Self {
+        Self::new(crate::transport::reqwest::default_client(), auth)
+    }
+
+    /// A client over a caller-configured [`reqwest::Client`].
+    ///
+    /// `reqwest`'s default [`reqwest::redirect::Policy`] follows redirects;
+    /// build `client` with [`reqwest::redirect::Policy::none()`] (as
+    /// [`crate::transport::reqwest::default_client`] does), or `3xx`
+    /// responses are resolved by `reqwest` instead of reaching this client.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// use dav_xml_client::transport::reqwest::default_client;
+    /// use dav_xml_client::{AsyncDavClient, Auth};
+    ///
+    /// let client = AsyncDavClient::reqwest_with(default_client(), Auth::basic("alice", "secret"));
+    /// let exists = client.exists("https://example.com/file").await.unwrap();
+    /// # let _ = exists;
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn reqwest_with(client: reqwest::Client, auth: Auth) -> Self {
+        Self::new(client, auth)
+    }
+}
