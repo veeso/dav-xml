@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<D:prop xmlns:D="DAV:">
+  <D:supportedlock>
+    <D:lockentry>
+      <D:lockscope><D:exclusive/></D:lockscope>
+      <D:locktype><D:write/></D:locktype>
+    </D:lockentry>
+    <D:lockentry>
+      <D:lockscope><D:shared/></D:lockscope>
+      <D:locktype><D:write/></D:locktype>
+    </D:lockentry>
+  </D:supportedlock>
+</D:prop>

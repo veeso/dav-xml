@@ -45,7 +45,7 @@ pub struct DavError {
 pub enum Condition {
     /// `DAV:lock-token-matches-request-uri` (UNLOCK).
     LockTokenMatchesRequestUri,
-    /// `DAV:lock-token-submitted`, with the locked resources.
+    /// `DAV:lock-token-submitted`, with any locked resources supplied by the server.
     LockTokenSubmitted(Vec<Href>),
     /// `DAV:no-conflicting-lock`, with the conflicting resources if known.
     NoConflictingLock(Vec<Href>),
@@ -89,17 +89,6 @@ impl Condition {
         }
     }
 
-    fn lock_token_submitted_hrefs(value: &Value) -> Result<Vec<Href>, Error> {
-        let hrefs = Self::hrefs(value)?;
-        if hrefs.is_empty() {
-            return Err(Error::MissingElement {
-                parent: "lock-token-submitted",
-                element: Href::LOCAL_NAME,
-            });
-        }
-        Ok(hrefs)
-    }
-
     fn from_entry(name: &ElementName<ByteString>, value: &Value) -> Result<Self, Error> {
         if name.namespace.as_deref() != Some(DAV_NAMESPACE) {
             return Ok(Self::Other {
@@ -110,9 +99,7 @@ impl Condition {
 
         Ok(match &*name.local_name {
             "lock-token-matches-request-uri" => Self::LockTokenMatchesRequestUri,
-            "lock-token-submitted" => {
-                Self::LockTokenSubmitted(Self::lock_token_submitted_hrefs(value)?)
-            }
+            "lock-token-submitted" => Self::LockTokenSubmitted(Self::hrefs(value)?),
             "no-conflicting-lock" => Self::NoConflictingLock(Self::hrefs(value)?),
             "no-external-entities" => Self::NoExternalEntities,
             "preserved-live-properties" => Self::PreservedLiveProperties,
@@ -171,18 +158,6 @@ impl Element for DavError {
     const NAMESPACE: &'static str = DAV_NAMESPACE;
     const PREFIX: &'static str = DAV_PREFIX;
     const LOCAL_NAME: &'static str = "error";
-
-    fn validate(&self) -> crate::Result<()> {
-        if self.conditions.iter().any(|condition| {
-            matches!(condition, Condition::LockTokenSubmitted(hrefs) if hrefs.is_empty())
-        }) {
-            return Err(Error::MissingElement {
-                parent: "lock-token-submitted",
-                element: Href::LOCAL_NAME,
-            });
-        }
-        Ok(())
-    }
 }
 
 impl TryFrom<&Value> for DavError {
@@ -285,32 +260,24 @@ mod tests {
     }
 
     #[test]
-    fn rejects_empty_lock_token_submitted() {
+    fn accepts_empty_lock_token_submitted_from_rfc_examples() {
         let error = DavError::from_xml(
             br#"<D:error xmlns:D="DAV:"><D:lock-token-submitted/></D:error>"#.to_vec(),
         )
-        .unwrap_err();
-        assert!(matches!(
-            error,
-            Error::MissingElement {
-                parent: "lock-token-submitted",
-                element: "href",
-            }
-        ));
+        .unwrap();
+        assert_eq!(
+            error.conditions,
+            vec![Condition::LockTokenSubmitted(Vec::new())]
+        );
     }
 
     #[test]
-    fn refuses_to_serialize_empty_lock_token_submitted() {
-        let error = DavError::single(Condition::LockTokenSubmitted(Vec::new()))
-            .into_xml()
-            .unwrap_err();
-        assert!(matches!(
-            error,
-            Error::MissingElement {
-                parent: "lock-token-submitted",
-                element: "href",
-            }
-        ));
+    fn serializes_empty_lock_token_submitted_from_rfc_examples() {
+        let error = DavError::single(Condition::LockTokenSubmitted(Vec::new()));
+        assert_eq!(
+            DavError::from_xml(error.clone().into_xml().unwrap()).unwrap(),
+            error
+        );
     }
 
     #[test]

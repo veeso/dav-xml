@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<D:prop xmlns:D='DAV:'>
+  <D:lockdiscovery>
+   <D:activelock>
+    <D:locktype><D:write/></D:locktype>
+    <D:lockscope><D:exclusive/></D:lockscope>
+    <D:depth>0</D:depth>
+    <D:owner>Jane Smith</D:owner>
+    <D:timeout>Infinite</D:timeout>
+    <D:locktoken>
+      <D:href
+  >urn:uuid:f81de2ad-7f3d-a1b2-4f3c-00a0c91a9d76</D:href>
+    </D:locktoken>
+    <D:lockroot>
+      <D:href>http://www.example.com/container/</D:href>
+    </D:lockroot>
+   </D:activelock>
+  </D:lockdiscovery>
+</D:prop>
