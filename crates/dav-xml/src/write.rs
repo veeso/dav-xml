@@ -31,17 +31,22 @@ pub(crate) fn write_xml<E: Element>(writer: impl std::io::Write, value: Value) -
 }
 
 fn validate_value(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
+    match value {
+        Value::List(list) => list.iter().try_for_each(|item| validate_value(name, item)),
+        Value::Text(_) | Value::Empty => validate_error(name, value),
+        Value::Map(map) => {
+            validate_error(name, value)?;
+            map.iter()
+                .try_for_each(|(child, value)| validate_value(child, value))
+        }
+    }
+}
+
+fn validate_error(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
     if name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == DavError::LOCAL_NAME {
         DavError::try_from(value)?.validate()?;
     }
-
-    match value {
-        Value::Text(_) | Value::Empty => Ok(()),
-        Value::List(list) => list.iter().try_for_each(|item| validate_value(name, item)),
-        Value::Map(map) => map
-            .iter()
-            .try_for_each(|(child, value)| validate_value(child, value)),
-    }
+    Ok(())
 }
 
 struct XmlWriter<W: std::io::Write> {
@@ -197,6 +202,7 @@ mod tests {
 
     use super::*;
     use crate::DAV_PREFIX;
+    use crate::elements::Condition;
     use crate::value::ValueMap;
 
     struct Root;
@@ -233,6 +239,23 @@ mod tests {
              <D:root xmlns:D=\"DAV:\" xmlns:a=\"urn:a\" xmlns:z=\"urn:z\">\n  \
              <z:a/>\n  <a:b/>\n</D:root>"
         );
+    }
+
+    #[test]
+    fn serializes_repeated_error_siblings() {
+        let mut map = ValueMap::new();
+        let error_name = name(DAV_NAMESPACE, DAV_PREFIX, DavError::LOCAL_NAME);
+        map.insert_raw(
+            error_name.clone(),
+            DavError::single(Condition::PropfindFiniteDepth).into(),
+        );
+        map.insert_raw(
+            error_name,
+            DavError::single(Condition::NoExternalEntities).into(),
+        );
+
+        let xml = render(Value::Map(map));
+        assert_eq!(xml.matches("<D:error").count(), 2);
     }
 
     #[test]
