@@ -215,6 +215,7 @@ dependencies = [
  "libnghttp2-sys",
  "libz-sys",
  "pkg-config",
+ "rustls-ffi",
  "vcpkg",
  "windows-sys 0.61.2",
 ]
@@ -756,6 +757,7 @@ dependencies = [
  "event-listener",
  "futures-lite",
  "http",
+ "pem-rfc7468",
  "polling",
  "slab",
  "sluice",
@@ -903,6 +905,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
+name = "macro_rules_attribute"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3ae8f6d608c795738406608304d30a2dfbdc8e58e44f7ba43236da5208ded3c"
+dependencies = [
+ "macro_rules_attribute-proc_macro",
+ "pastey",
+]
+
+[[package]]
+name = "macro_rules_attribute-proc_macro"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc04a4c58212d57930a24bf47d3fa87485264a3a054e9c10e042eb373573ad3c"
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1031,6 +1049,12 @@ dependencies = [
  "smallvec",
  "windows-link",
 ]
+
+[[package]]
+name = "pastey"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
 
 [[package]]
 name = "pem-rfc7468"
@@ -1338,6 +1362,20 @@ dependencies = [
  "rustls-webpki",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "rustls-ffi"
+version = "0.15.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57e80b8f2dee9c7cd5ad441577a8f350cf67080205dd3415bbafa7998fc6b5cf"
+dependencies = [
+ "libc",
+ "log",
+ "macro_rules_attribute",
+ "rustls",
+ "rustls-platform-verifier",
+ "rustls-webpki",
 ]
 
 [[package]]

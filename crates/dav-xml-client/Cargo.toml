@@ -14,14 +14,14 @@ rust-version.workspace = true
 description = "Minimal sync and async WebDAV (RFC 4918) client."
 
 [features]
+containers = ["mock"]
 default = ["reqwest"]
-isahc = ["dep:isahc", "isahc/http2", "isahc/static-curl"]
+isahc = ["dep:isahc", "isahc/default-tls", "isahc/http2", "isahc/static-curl"]
 mock = []
 native-tls = ["reqwest?/native-tls", "ureq?/native-tls"]
 reqwest = ["dep:reqwest", "reqwest/default-tls", "reqwest/http2"]
 rustls = ["reqwest?/rustls", "ureq?/rustls"]
 ureq = ["dep:ureq", "ureq/rustls"]
-containers = ["mock"]
 
 [dependencies]
 bytes = { workspace = true }

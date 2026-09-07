@@ -2,7 +2,7 @@
 [group('test')]
 test args="":
   cargo test --workspace --all-targets {{ args }}
-  cargo test --workspace --doc
+  cargo test --workspace --doc --all-features
 
 # Generate an LCOV coverage report.
 [group('test')]
