@@ -6,8 +6,11 @@
 
 use super::{Transport, TransportError, TransportErrorKind};
 
-/// An agent that returns error statuses as responses and follows no
-/// redirects (`WebDAV` clients must see `3xx` themselves).
+/// An agent that returns error statuses as responses, follows no redirects
+/// (`WebDAV` clients must see `3xx` themselves), and allows the
+/// non-standard HTTP methods `WebDAV` verbs need (`MKCOL`, `PROPFIND`,
+/// `PROPPATCH`, `COPY`, `MOVE`, `LOCK`, `UNLOCK`), which `ureq` otherwise
+/// rejects outright regardless of HTTP version.
 ///
 /// # Examples
 ///
@@ -17,12 +20,14 @@ use super::{Transport, TransportError, TransportErrorKind};
 /// let agent = default_agent();
 /// assert!(!agent.config().http_status_as_error());
 /// assert_eq!(agent.config().max_redirects(), 0);
+/// assert!(agent.config().allow_non_standard_methods());
 /// ```
 #[must_use]
 pub fn default_agent() -> ureq::Agent {
     ureq::Agent::config_builder()
         .http_status_as_error(false)
         .max_redirects(0)
+        .allow_non_standard_methods(true)
         .build()
         .into()
 }
