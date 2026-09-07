@@ -10,6 +10,10 @@
 //! XML body from RFC 4918 section 9.9.6: section 9.9.5 has only a header-only
 //! response. Likewise, `9.10.10-error.xml` contains the RFC 4918 section 16
 //! condition example, because RFC 4918 has no section 9.10.10.
+//! The `15.8-lockdiscovery.xml` and `15.10-supportedlock.xml` fixtures are
+//! property subtree extracts from the RFC's complete `multistatus` examples;
+//! their namespace declarations are relocated to each extracted root so each
+//! fixture is independently parseable.
 
 use dav_xml::elements::{
     DavError, LockInfo, Multistatus, Prop, PropFind, PropertyUpdate, Response,
