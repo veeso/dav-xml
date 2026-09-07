@@ -5,6 +5,17 @@
 href_element!(
     /// The `lockroot` XML element
     /// ([RFC 4918 section 14.12](https://www.rfc-editor.org/rfc/rfc4918#section-14.12)).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::{Href, LockRoot};
+    /// use dav_xml::IntoXml;
+    ///
+    /// let root = LockRoot::from(Href("https://example.org/locked".parse().unwrap()));
+    /// let xml = root.into_xml().unwrap();
+    /// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:lockroot"));
+    /// ```
     LockRoot,
     "lockroot"
 );

@@ -5,6 +5,17 @@
 href_element!(
     /// The `location` XML element
     /// ([RFC 4918 section 14.9](https://www.rfc-editor.org/rfc/rfc4918#section-14.9)).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::{Href, Location};
+    /// use dav_xml::IntoXml;
+    ///
+    /// let location = Location::from(Href("https://example.org/new".parse().unwrap()));
+    /// let xml = location.into_xml().unwrap();
+    /// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:location"));
+    /// ```
     Location,
     "location"
 );

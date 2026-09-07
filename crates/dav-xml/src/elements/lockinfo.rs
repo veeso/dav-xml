@@ -7,6 +7,17 @@ use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
 /// The `lockinfo` XML element
 /// ([RFC 4918 section 14.16](https://www.rfc-editor.org/rfc/rfc4918#section-14.16)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::LockInfo;
+/// use dav_xml::IntoXml;
+///
+/// let info = LockInfo::exclusive_write();
+/// let xml = info.into_xml().unwrap();
+/// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:lockinfo"));
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct LockInfo {
     /// The requested scope of the lock.

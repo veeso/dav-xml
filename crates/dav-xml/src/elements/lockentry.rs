@@ -7,6 +7,20 @@ use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
 /// The `lockentry` XML element
 /// ([RFC 4918 section 14.11](https://www.rfc-editor.org/rfc/rfc4918#section-14.11)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::{LockEntry, LockScope, LockType};
+/// use dav_xml::IntoXml;
+///
+/// let entry = LockEntry {
+///     lockscope: LockScope::Exclusive,
+///     locktype: LockType::Write,
+/// };
+/// let xml = entry.into_xml().unwrap();
+/// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:lockentry"));
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct LockEntry {
     /// The scope this lock kind supports.

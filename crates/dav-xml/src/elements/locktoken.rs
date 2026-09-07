@@ -5,6 +5,17 @@
 href_element!(
     /// The `locktoken` XML element
     /// ([RFC 4918 section 14.14](https://www.rfc-editor.org/rfc/rfc4918#section-14.14)).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::{Href, LockToken};
+    /// use dav_xml::IntoXml;
+    ///
+    /// let token = LockToken::from(Href("https://example.org/token".parse().unwrap()));
+    /// let xml = token.into_xml().unwrap();
+    /// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:locktoken"));
+    /// ```
     LockToken,
     "locktoken"
 );
