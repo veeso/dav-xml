@@ -27,6 +27,45 @@ pub enum Value {
     /// The parent element contains multiple elements of this type, e.g. `<foo
     /// /><foo />`
     List(Box<NonEmpty<Value>>),
+    /// The element contains text and child elements in source order.
+    ///
+    /// This representation is used for the `DAV:owner` subtree, whose RFC
+    /// 4918 content model permits arbitrary mixed content. Attributes are not
+    /// represented because the generic value model has no attribute storage.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::{ContentItem, ElementName, Value};
+    ///
+    /// let value = Value::Mixed(vec![
+    ///     ContentItem::Text("before".into()),
+    ///     ContentItem::Element {
+    ///         name: ElementName {
+    ///             namespace: Some("DAV:".into()),
+    ///             prefix: Some("D".into()),
+    ///             local_name: "href".into(),
+    ///         },
+    ///         value: Value::Text("/users/jane".into()),
+    ///     },
+    /// ]);
+    /// assert!(matches!(value, Value::Mixed(_)));
+    /// ```
+    Mixed(Vec<ContentItem>),
+}
+
+/// One ordered item in [`Value::Mixed`] content.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ContentItem {
+    /// A text chunk, with entity and CDATA content already decoded.
+    Text(ByteString),
+    /// A named child element and its content.
+    Element {
+        /// The qualified name of the child element.
+        name: ElementName<ByteString>,
+        /// The value contained by the child element.
+        value: Value,
+    },
 }
 
 impl Value {
@@ -254,7 +293,7 @@ impl ValueMap {
         let tracks_order = self.values.is_empty() || !self.order.is_empty();
         let occurrence_count = match &value {
             Value::List(values) => values.len(),
-            Value::Empty | Value::Text(_) | Value::Map(_) => 1,
+            Value::Empty | Value::Text(_) | Value::Map(_) | Value::Mixed(_) => 1,
         };
         self.values.insert(key.clone(), value);
 
