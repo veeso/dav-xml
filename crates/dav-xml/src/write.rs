@@ -202,7 +202,7 @@ impl<W: std::io::Write> XmlWriter<W> {
 
     fn write_value(&mut self, name: &ElementName<ByteString>, value: &Value) -> Result<()> {
         if is_owner_name(name) {
-            return self.write_value_without_indent(name, value);
+            return self.write_owner_value(name, value);
         }
 
         let raw_name = self.qualified(name).into_owned();
@@ -237,6 +237,41 @@ impl<W: std::io::Write> XmlWriter<W> {
                 self.write_mixed(items)?;
                 self.inner
                     .write_event(Event::End(BytesEnd::new(raw_name)))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_owner_value(&mut self, name: &ElementName<ByteString>, value: &Value) -> Result<()> {
+        let raw_name = self.qualified(name).into_owned();
+        match value {
+            Value::Empty => self
+                .inner
+                .write_event(Event::Empty(BytesStart::new(raw_name)))?,
+            Value::Text(text) => {
+                self.inner
+                    .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                self.inner.write_event(Event::Text(BytesText::new(text)))?;
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+            }
+            Value::List(list) => {
+                for item in list.iter() {
+                    self.write_owner_value(name, item)?;
+                }
+            }
+            Value::Map(map) => {
+                self.inner
+                    .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                for (child, value) in map.iter_ordered() {
+                    self.write_value_without_indent(child, value)?;
+                }
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+            }
+            Value::Mixed(items) => {
+                self.inner
+                    .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                self.write_mixed_without_indent(items)?;
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
             }
         }
         Ok(())
@@ -330,7 +365,7 @@ mod tests {
 
     use super::*;
     use crate::DAV_PREFIX;
-    use crate::elements::Condition;
+    use crate::elements::{Condition, LockInfo, Owner};
     use crate::value::ValueMap;
 
     struct Root;
@@ -514,6 +549,31 @@ mod tests {
                 expected: "child elements",
             }
         ));
+    }
+
+    #[test]
+    fn indents_owner_start_while_preserving_owner_content() {
+        let info = LockInfo::exclusive_write().with_owner(Owner::text("\n  Jane\n"));
+        let mut out = Vec::new();
+        write_xml::<LockInfo>(&mut out, info.into()).unwrap();
+
+        assert_eq!(
+            String::from_utf8(out).unwrap(),
+            concat!(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+                "<D:lockinfo xmlns:D=\"DAV:\">\n",
+                "  <D:lockscope>\n",
+                "    <D:exclusive/>\n",
+                "  </D:lockscope>\n",
+                "  <D:locktype>\n",
+                "    <D:write/>\n",
+                "  </D:locktype>\n",
+                "  <D:owner>\n",
+                "  Jane\n",
+                "</D:owner>\n",
+                "</D:lockinfo>"
+            )
+        );
     }
 
     #[test]
