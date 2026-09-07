@@ -356,18 +356,7 @@ impl ValueMap {
                 self.values
                     .get_key_value(order_key)
                     .and_then(|(key, value)| match value {
-                        Value::List(list) => {
-                            let occurrence_count = self
-                                .order
-                                .iter()
-                                .filter(|(key, _)| key == order_key)
-                                .count();
-                            if occurrence_count == 1 {
-                                Some((key, value))
-                            } else {
-                                list.iter().nth(*index).map(|value| (key, value))
-                            }
-                        }
+                        Value::List(list) => list.get(*index).map(|value| (key, value)),
                         value if *index == 0 => Some((key, value)),
                         _ => None,
                     })
@@ -383,6 +372,14 @@ impl ValueMap {
 
     /// Append a raw child value, grouping duplicate names into a list.
     pub fn insert_raw(&mut self, key: ElementName<ByteString>, value: Value) {
+        if let Value::List(list) = value {
+            let list = *list;
+            std::iter::once(list.head)
+                .chain(list.tail)
+                .for_each(|value| self.insert_raw(key.clone(), value));
+            return;
+        }
+
         let tracks_order = self.values.is_empty() || !self.order.is_empty();
         let index = match self.values.get(&key) {
             Some(Value::List(values)) => values.len(),
@@ -423,6 +420,7 @@ impl AsRef<InnerValueMap> for ValueMap {
 
 impl AsMut<InnerValueMap> for ValueMap {
     fn as_mut(&mut self) -> &mut InnerValueMap {
+        self.order.clear();
         &mut self.values
     }
 }
@@ -570,6 +568,82 @@ mod tests {
             .map(|(name, _)| &*name.local_name)
             .collect();
         assert_eq!(names, ["alpha", "beta"]);
+    }
+
+    #[test]
+    fn as_mut_invalidates_order_metadata() {
+        let alpha = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "alpha".into(),
+        };
+        let beta = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "beta".into(),
+        };
+        let mut map = ValueMap::new();
+        map.insert_raw(alpha, Value::Empty);
+        map.as_mut().insert(beta, Value::Empty);
+
+        let names: Vec<_> = map
+            .iter_ordered()
+            .map(|(name, _)| &*name.local_name)
+            .collect();
+        assert_eq!(names, ["alpha", "beta"]);
+    }
+
+    #[test]
+    fn insert_raw_flattens_incoming_lists_and_tracks_each_occurrence() {
+        let alpha = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "alpha".into(),
+        };
+        let beta = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "beta".into(),
+        };
+        let mut map = ValueMap::new();
+        map.insert_raw(
+            alpha.clone(),
+            Value::List(Box::new(nonempty::nonempty![
+                Value::Text("first".into()),
+                Value::Text("second".into()),
+            ])),
+        );
+        map.insert_raw(beta, Value::Empty);
+        map.insert_raw(
+            alpha.clone(),
+            Value::List(Box::new(nonempty::nonempty![
+                Value::Text("third".into()),
+                Value::Text("fourth".into()),
+            ])),
+        );
+
+        let children: Vec<_> = map
+            .iter_ordered()
+            .map(|(name, value)| {
+                (
+                    name.local_name.to_string(),
+                    value.as_str().map(ToString::to_string).ok(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            children,
+            [
+                ("alpha".to_owned(), Some("first".to_owned())),
+                ("alpha".to_owned(), Some("second".to_owned())),
+                ("beta".to_owned(), None),
+                ("alpha".to_owned(), Some("third".to_owned())),
+                ("alpha".to_owned(), Some("fourth".to_owned())),
+            ]
+        );
+        let values = map.as_ref().get(&alpha).unwrap().as_list().unwrap();
+        assert_eq!(values.len(), 4);
+        assert!(values.iter().all(|value| !value.is_list()));
     }
 
     #[test]
