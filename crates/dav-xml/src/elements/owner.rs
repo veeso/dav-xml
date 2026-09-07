@@ -124,6 +124,62 @@ mod tests {
     }
 
     #[test]
+    fn preserves_whitespace_only_owner_text() {
+        let owner = Owner::from_xml(
+            br#"<D:owner xmlns:D="DAV:">
+  </D:owner>"#
+                .to_vec(),
+        )
+        .unwrap();
+        assert_eq!(owner, Owner(Value::Text("\n  ".into())));
+    }
+
+    #[test]
+    fn preserves_whitespace_before_and_after_owner_children() {
+        let xml = br#"<D:owner xmlns:D="DAV:">
+  <D:href>/u</D:href>
+</D:owner>"#;
+        assert_eq!(
+            Owner::from_xml(xml.to_vec()).unwrap(),
+            Owner(Value::Mixed(vec![
+                ContentItem::Text("\n  ".into()),
+                ContentItem::Element {
+                    name: dav_name("href"),
+                    value: Value::Text("/u".into()),
+                },
+                ContentItem::Text("\n".into()),
+            ]))
+        );
+    }
+
+    #[test]
+    fn preserves_whitespace_in_nested_owner_descendants() {
+        let xml = br#"<D:owner xmlns:D="DAV:">
+  <D:wrapper>
+    <D:leaf/>
+  </D:wrapper>
+</D:owner>"#;
+        assert_eq!(
+            Owner::from_xml(xml.to_vec()).unwrap(),
+            Owner(Value::Mixed(vec![
+                ContentItem::Text("\n  ".into()),
+                ContentItem::Element {
+                    name: dav_name("wrapper"),
+                    value: Value::Mixed(vec![
+                        ContentItem::Text("\n    ".into()),
+                        ContentItem::Element {
+                            name: dav_name("leaf"),
+                            value: Value::Empty,
+                        },
+                        ContentItem::Text("\n  ".into()),
+                    ]),
+                },
+                ContentItem::Text("\n".into()),
+            ]))
+        );
+    }
+
+    #[test]
     fn accepts_child_then_text_owner_content() {
         let xml = br#"<D:owner xmlns:D="DAV:"><D:href>/u</D:href>tail</D:owner>"#;
         assert_eq!(

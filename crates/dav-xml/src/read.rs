@@ -244,7 +244,7 @@ fn is_owner_name(name: &ElementName<ByteString>) -> bool {
 fn mixed_value(items: Vec<ContentItem>) -> Value {
     let has_text = items
         .iter()
-        .any(|item| matches!(item, ContentItem::Text(text) if text.chars().any(|character| !character.is_whitespace())));
+        .any(|item| matches!(item, ContentItem::Text(_)));
     let has_element = items
         .iter()
         .any(|item| matches!(item, ContentItem::Element { .. }));
