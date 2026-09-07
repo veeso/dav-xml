@@ -123,7 +123,7 @@ impl From<Depth> for Value {
     }
 }
 
-/// A `depth` value other than `0`, `1`, or `infinity`.
+/// A `depth` value other than `0`, `1`, or `infinity` ([RFC 4918 section 10.2](https://www.rfc-editor.org/rfc/rfc4918#section-10.2)).
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[error("invalid depth: {0}")]
 pub struct InvalidDepth(String);
