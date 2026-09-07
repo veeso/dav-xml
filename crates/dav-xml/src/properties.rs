@@ -12,7 +12,9 @@ mod getcontentlength;
 mod getcontenttype;
 mod getetag;
 mod getlastmodified;
+mod lockdiscovery;
 mod resourcetype;
+mod supportedlock;
 
 pub use self::creationdate::CreationDate;
 pub use self::displayname::DisplayName;
@@ -21,4 +23,6 @@ pub use self::getcontentlength::ContentLength;
 pub use self::getcontenttype::ContentType;
 pub use self::getetag::ETag;
 pub use self::getlastmodified::LastModified;
+pub use self::lockdiscovery::LockDiscovery;
 pub use self::resourcetype::{Collection, ResourceType};
+pub use self::supportedlock::SupportedLock;

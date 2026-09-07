@@ -6,7 +6,7 @@ use nonempty::NonEmpty;
 
 use crate::elements::{Href, Propstat, ResponseDescription, Status};
 use crate::utils::NonEmptyExt;
-use crate::value::ValueMap;
+use crate::value::{ValueMap, list_value};
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
 
 /// The `response` XML element as defined in [RFC 4918](http://webdav.org/specs/rfc4918.html#ELEMENT_response).
@@ -79,7 +79,7 @@ impl From<Response> for Value {
                 responsedescription,
             } => {
                 map.insert::<Href>(href.into());
-                map.insert::<Propstat>(Value::List(Box::new(propstat.map(Value::from))));
+                map.insert::<Propstat>(list_value(propstat.into_iter().collect()));
                 if let Some(responsedescription) = responsedescription {
                     map.insert::<ResponseDescription>(responsedescription.into());
                 }
@@ -89,7 +89,7 @@ impl From<Response> for Value {
                 status,
                 responsedescription,
             } => {
-                map.insert::<Href>(Value::List(Box::new(href.map(Value::from))));
+                map.insert::<Href>(list_value(href.into_iter().collect()));
                 map.insert::<Status>(status.into());
                 if let Some(responsedescription) = responsedescription {
                     map.insert::<ResponseDescription>(responsedescription.into());

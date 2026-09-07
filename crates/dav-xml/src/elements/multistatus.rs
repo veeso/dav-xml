@@ -2,11 +2,9 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use nonempty::NonEmpty;
-
 use crate::elements::response::Response;
 use crate::elements::{Href, ResponseDescription, Status};
-use crate::value::ValueMap;
+use crate::value::{ValueMap, list_value};
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
 
 /// The `multistatus` XML element as defined in [RFC 4918](http://webdav.org/specs/rfc4918.html#ELEMENT_multistatus).
@@ -67,12 +65,7 @@ impl From<Multistatus> for Value {
     ) -> Value {
         let mut map = ValueMap::new();
 
-        map.insert::<Response>(
-            match NonEmpty::collect(response.into_iter().map(Value::from)) {
-                Some(responses) => Value::List(Box::new(responses)),
-                None => Value::Empty,
-            },
-        );
+        map.insert::<Response>(list_value(response));
         if let Some(responsedescription) = responsedescription {
             map.insert::<ResponseDescription>(responsedescription.into());
         }

@@ -134,6 +134,25 @@ impl From<String> for Value {
     }
 }
 
+/// Convert a sequence of elements into the corresponding XML value.
+pub(crate) fn list_value<E>(items: Vec<E>) -> Value
+where
+    E: Element + Into<Value>,
+{
+    let mut values = items.into_iter().map(Into::into);
+    let Some(first) = values.next() else {
+        return Value::Empty;
+    };
+    let Some(second) = values.next() else {
+        return first;
+    };
+
+    let mut list = NonEmpty::new(first);
+    list.push(second);
+    list.extend(values);
+    Value::List(Box::new(list))
+}
+
 type InnerValueMap = IndexMap<ElementName<ByteString>, Value>;
 
 /// A mapping from tag names to [`Value`]s.
