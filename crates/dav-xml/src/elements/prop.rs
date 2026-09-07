@@ -20,6 +20,41 @@ use crate::{DAV_NAMESPACE, DAV_PREFIX, Error};
 pub struct Prop(ValueMap);
 
 impl Prop {
+    /// Create a builder for a `prop` element.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let prop = Prop::builder()
+    ///     .property(DisplayName("Notes".into()))
+    ///     .build();
+    /// assert_eq!(prop.displayname().unwrap().unwrap().unwrap().0, "Notes");
+    /// ```
+    #[must_use]
+    pub fn builder() -> PropBuilder {
+        PropBuilder::default()
+    }
+
+    /// Add a typed property with a value.
+    #[must_use]
+    pub fn with<P>(mut self, property: P) -> Self
+    where
+        P: Element + Into<Value>,
+    {
+        self.0.insert::<P>(property.into());
+        self
+    }
+
+    /// Add an empty typed property.
+    #[must_use]
+    pub fn with_name<P: Element>(mut self) -> Self {
+        self.0.insert::<P>(Value::Empty);
+        self
+    }
+
     /// Read a specific property from this `prop` element.
     ///
     /// Returns
@@ -39,6 +74,42 @@ impl Prop {
     /// Insert or replace property `P` with `value`.
     pub fn insert<P: Element>(&mut self, value: Value) {
         self.0.insert::<P>(value);
+    }
+}
+
+/// Incrementally build a [`Prop`].
+#[derive(Debug, Default)]
+pub struct PropBuilder(ValueMap);
+
+impl PropBuilder {
+    /// Add a typed property with a value.
+    #[must_use]
+    pub fn property<P>(mut self, property: P) -> Self
+    where
+        P: Element + Into<Value>,
+    {
+        self.0.insert::<P>(property.into());
+        self
+    }
+
+    /// Add an empty property element, as used in `propfind` and `remove`.
+    #[must_use]
+    pub fn name<P: Element>(mut self) -> Self {
+        self.0.insert::<P>(Value::Empty);
+        self
+    }
+
+    /// Add an arbitrary child element.
+    #[must_use]
+    pub fn raw(mut self, name: ElementName<ByteString>, value: Value) -> Self {
+        self.0.insert_raw(name, value);
+        self
+    }
+
+    /// Finish building the property collection.
+    #[must_use]
+    pub fn build(self) -> Prop {
+        Prop(self.0)
     }
 }
 
@@ -238,5 +309,57 @@ mod tests {
         prop.insert::<DavError>(DavError::single(Condition::NoConflictingLock(Vec::new())).into());
 
         prop.into_xml().unwrap();
+    }
+
+    #[test]
+    fn builder_adds_typed_property() {
+        let prop = Prop::builder()
+            .property(DisplayName("New display name".into()))
+            .build();
+
+        assert_eq!(
+            prop.displayname().unwrap().unwrap().unwrap().0,
+            "New display name"
+        );
+    }
+
+    #[test]
+    fn builder_adds_empty_typed_property() {
+        let prop = Prop::builder().name::<DisplayName>().build();
+
+        assert!(matches!(prop.displayname(), Some(None)));
+    }
+
+    #[test]
+    fn builder_adds_raw_property() {
+        let prop = Prop::builder()
+            .raw(
+                ElementName {
+                    namespace: Some("urn:example".into()),
+                    prefix: Some("E".into()),
+                    local_name: "custom".into(),
+                },
+                Value::Text("value".into()),
+            )
+            .build();
+
+        assert!(prop.names().any(|name| name.local_name == "custom"));
+    }
+
+    #[test]
+    fn with_adds_typed_property() {
+        let prop = Prop::default().with(DisplayName("New display name".into()));
+
+        assert_eq!(
+            prop.displayname().unwrap().unwrap().unwrap().0,
+            "New display name"
+        );
+    }
+
+    #[test]
+    fn with_name_adds_empty_typed_property() {
+        let prop = Prop::default().with_name::<DisplayName>();
+
+        assert!(matches!(prop.displayname(), Some(None)));
     }
 }
