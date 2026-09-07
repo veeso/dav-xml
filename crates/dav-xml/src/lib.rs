@@ -102,14 +102,16 @@ pub trait IntoXml: Sized {
     /// # Errors
     ///
     /// Returns [`Error::Io`] when `writer` fails or [`Error::Xml`] when the
-    /// document cannot be encoded.
+    /// document cannot be encoded. Also returns [`Error`] when element or
+    /// content validation fails.
     fn write_xml(self, writer: impl std::io::Write) -> Result<()>;
 
     /// Serialize `self` into an in-memory XML document.
     ///
     /// # Errors
     ///
-    /// See [`IntoXml::write_xml`].
+    /// Returns [`Error`] when element or content validation fails or the
+    /// document cannot be encoded. See [`IntoXml::write_xml`] for details.
     fn into_xml(self) -> Result<Bytes> {
         let mut xml = bytes::BytesMut::new().writer();
         self.write_xml(&mut xml)?;
