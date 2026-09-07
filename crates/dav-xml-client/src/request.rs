@@ -99,7 +99,7 @@ impl RequestContext<'_> {
         Ok(builder.body(Vec::new())?)
     }
 
-    /// `OPTIONS` ([RFC 4918 section 9.1](https://www.rfc-editor.org/rfc/rfc4918#section-9.1)): discover the server's capabilities, with no body.
+    /// `OPTIONS` ([RFC 4918 section 10.1](https://www.rfc-editor.org/rfc/rfc4918#section-10.1)): discover the server's capabilities, with no body.
     ///
     /// # Errors
     ///

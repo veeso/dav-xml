@@ -74,6 +74,15 @@ pub enum Auth {
 
 impl Auth {
     /// Basic credentials built from a `username` and `password`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml_client::Auth;
+    ///
+    /// let auth = Auth::basic("alice", "secret");
+    /// assert_eq!(auth.header_value().unwrap(), "Basic YWxpY2U6c2VjcmV0");
+    /// ```
     pub fn basic(username: impl Into<String>, password: impl Into<String>) -> Self {
         Self::Basic {
             username: username.into(),
@@ -82,6 +91,15 @@ impl Auth {
     }
 
     /// A bearer token.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml_client::Auth;
+    ///
+    /// let auth = Auth::bearer("tok");
+    /// assert_eq!(auth.header_value().unwrap(), "Bearer tok");
+    /// ```
     pub fn bearer(token: impl Into<String>) -> Self {
         Self::Bearer(token.into())
     }

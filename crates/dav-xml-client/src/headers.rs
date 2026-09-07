@@ -56,6 +56,14 @@ mod tests {
     }
 
     #[test]
+    fn lock_token_header_rejects_asymmetric_brackets() {
+        "<urn:x".parse::<LockTokenHeader>().unwrap_err();
+        "urn:x>".parse::<LockTokenHeader>().unwrap_err();
+        "<".parse::<LockTokenHeader>().unwrap_err();
+        ">".parse::<LockTokenHeader>().unwrap_err();
+    }
+
+    #[test]
     fn dav_header_lists_classes() {
         let dav: DavHeader = "1, 2, 3, extended-mkcol".parse().unwrap();
         assert_eq!(dav.classes, ["1", "2", "3", "extended-mkcol"]);
@@ -436,16 +444,23 @@ impl FromStr for LockTokenHeader {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
-        let token = trimmed
-            .strip_prefix('<')
-            .and_then(|rest| rest.strip_suffix('>'))
-            .unwrap_or(trimmed)
-            .trim();
+        let invalid = || InvalidHeader {
+            header: "Lock-Token",
+            value: s.to_owned(),
+        };
+        // Bracket-stripping is symmetric: either both `<` and `>` are
+        // present and get stripped, or neither is and `trimmed` is taken
+        // as-is. Exactly one bracket present (a truncated or malformed
+        // coded-URL) is rejected rather than silently kept, so a corrupted
+        // server header cannot be echoed back verbatim in a later `If` or
+        // `Lock-Token` header.
+        let token = match (trimmed.starts_with('<'), trimmed.ends_with('>')) {
+            (true, true) => trimmed[1..trimmed.len() - 1].trim(),
+            (false, false) => trimmed,
+            _ => return Err(invalid()),
+        };
         if token.is_empty() {
-            return Err(InvalidHeader {
-                header: "Lock-Token",
-                value: s.to_owned(),
-            });
+            return Err(invalid());
         }
         Ok(Self(token.to_owned()))
     }
