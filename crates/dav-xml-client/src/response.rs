@@ -9,17 +9,11 @@ use dav_xml::elements::{DavError, Multistatus, Prop};
 use dav_xml::properties::LockDiscovery;
 
 use crate::capabilities::Capabilities;
+use crate::client::Lock;
 use crate::error::{Error, Result};
 use crate::headers::{self, DavHeader, LockTokenHeader};
 
 /// Whether the response's `Content-Type` header names an XML media type.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by request builders and clients added in later tasks"
-    )
-)]
 fn is_xml(response: &http::Response<Vec<u8>>) -> bool {
     response
         .headers()
@@ -39,13 +33,6 @@ fn is_xml(response: &http::Response<Vec<u8>>) -> bool {
 ///
 /// Returns [`Error::Status`] when `response` did not return a success
 /// status.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by request builders and clients added in later tasks"
-    )
-)]
 pub(crate) fn ensure_success(response: http::Response<Vec<u8>>) -> Result<http::Response<Vec<u8>>> {
     if response.status().is_success() {
         return Ok(response);
@@ -73,13 +60,6 @@ pub(crate) fn ensure_success(response: http::Response<Vec<u8>>) -> Result<http::
 /// Returns [`Error::Status`] when `response` did not return a success
 /// status or did not return `207 Multi-Status`, and [`Error::Xml`] when the
 /// body cannot be parsed as a `multistatus` element.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by request builders and clients added in later tasks"
-    )
-)]
 pub(crate) fn multistatus(response: http::Response<Vec<u8>>) -> Result<Multistatus> {
     let response = ensure_success(response)?;
     if response.status() != http::StatusCode::MULTI_STATUS {
@@ -105,13 +85,6 @@ pub(crate) fn multistatus(response: http::Response<Vec<u8>>) -> Result<Multistat
 /// Returns [`Error::Status`] when `response` did not return a success
 /// status, [`Error::Xml`] when a `207` body cannot be parsed, and
 /// [`Error::Multistatus`] when a `207` body reports at least one failure.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by request builders and clients added in later tasks"
-    )
-)]
 pub(crate) fn ok_or_multistatus(response: http::Response<Vec<u8>>) -> Result<()> {
     let response = ensure_success(response)?;
     if response.status() != http::StatusCode::MULTI_STATUS {
@@ -133,13 +106,6 @@ pub(crate) fn ok_or_multistatus(response: http::Response<Vec<u8>>) -> Result<()>
 /// Returns [`Error::Status`] when `response` did not return a success
 /// status, and [`Error::Xml`] when the body cannot be parsed as a `prop`
 /// element.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by request builders and clients added in later tasks"
-    )
-)]
 pub(crate) fn lock_discovery(
     response: http::Response<Vec<u8>>,
 ) -> Result<(LockDiscovery, Option<LockTokenHeader>)> {
@@ -167,13 +133,6 @@ pub(crate) fn lock_discovery(
 ///
 /// Returns [`Error::Status`] when `response` did not return a success
 /// status.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "consumed by request builders and clients added in later tasks"
-    )
-)]
 pub(crate) fn capabilities(response: http::Response<Vec<u8>>) -> Result<Capabilities> {
     let response = ensure_success(response)?;
     let dav = response
@@ -194,6 +153,36 @@ pub(crate) fn capabilities(response: http::Response<Vec<u8>>) -> Result<Capabili
         .filter_map(|token| http::Method::from_bytes(token.trim().as_bytes()).ok())
         .collect();
     Ok(Capabilities { dav, allow })
+}
+
+/// Build a [`Lock`] from a `LOCK` or `LOCK` refresh response's
+/// [`lock_discovery`] result.
+///
+/// The token is read, in order of preference, from `header` (the
+/// response's `Lock-Token` header), then from the first `locktoken` found
+/// in `discovery`, then from `fallback` (the token the caller already knew,
+/// for a refresh whose response carries neither).
+///
+/// # Errors
+///
+/// Returns [`Error::MissingLockToken`] when none of `header`, `discovery`
+/// or `fallback` carries a token.
+pub(crate) fn lock_result(
+    discovery: LockDiscovery,
+    header: Option<LockTokenHeader>,
+    fallback: Option<LockTokenHeader>,
+) -> Result<Lock> {
+    let token = header
+        .or_else(|| {
+            discovery
+                .0
+                .iter()
+                .find_map(|lock| lock.locktoken.as_ref())
+                .map(|token| LockTokenHeader(token.0.to_string()))
+        })
+        .or(fallback)
+        .ok_or(Error::MissingLockToken)?;
+    Ok(Lock { token, discovery })
 }
 
 #[cfg(test)]

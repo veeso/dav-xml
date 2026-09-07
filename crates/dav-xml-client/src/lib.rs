@@ -19,6 +19,7 @@ pub use dav_xml::DAV_NAMESPACE;
 
 pub mod auth;
 pub mod capabilities;
+pub mod client;
 pub mod error;
 pub mod headers;
 pub(crate) mod request;
@@ -30,6 +31,8 @@ pub mod transport;
 pub use auth::Auth;
 #[doc(inline)]
 pub use capabilities::Capabilities;
+#[doc(inline)]
+pub use client::{DavClient, Lock};
 #[doc(inline)]
 pub use error::{Error, Result};
 #[doc(inline)]
