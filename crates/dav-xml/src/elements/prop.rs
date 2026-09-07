@@ -423,6 +423,59 @@ mod tests {
     }
 
     #[test]
+    fn round_trips_nested_mixed_custom_property_value() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom><Z:paragraph>before<Z:bold/>after</Z:paragraph></Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
+        );
+    }
+
+    #[test]
+    fn round_trips_adjacent_mixed_custom_property_children() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom>before<Z:a/><Z:b/>after</Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
+        );
+    }
+
+    #[test]
+    fn preserves_whitespace_only_custom_property_value() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom> </Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+        let custom_name: ElementName<ByteString> = ElementName {
+            namespace: Some("urn:example".into()),
+            prefix: None,
+            local_name: "custom".into(),
+        };
+
+        assert_eq!(
+            prop.0.as_ref().get(&custom_name),
+            Some(&Value::Text(" ".into()))
+        );
+    }
+
+    #[test]
     fn ignores_formatting_whitespace_around_property_children() {
         let prop = Prop::from_xml(
             br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
