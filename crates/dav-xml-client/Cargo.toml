@@ -13,8 +13,29 @@ repository.workspace = true
 rust-version.workspace = true
 description = "Minimal sync and async WebDAV (RFC 4918) client."
 
+[features]
+default = ["reqwest"]
+isahc = ["dep:isahc", "isahc/http2", "isahc/static-curl"]
+mock = []
+native-tls = ["reqwest?/native-tls", "ureq?/native-tls"]
+reqwest = ["dep:reqwest", "reqwest/default-tls", "reqwest/http2"]
+rustls = ["reqwest?/rustls", "ureq?/rustls"]
+ureq = ["dep:ureq", "ureq/rustls"]
+containers = ["mock"]
+
 [dependencies]
+bytes = { workspace = true }
 dav-xml = { workspace = true }
+http = { workspace = true }
+isahc = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+thiserror = { workspace = true }
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+serial_test = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 [lib]
 name = "dav_xml_client"
@@ -22,3 +43,7 @@ path = "src/lib.rs"
 
 [lints]
 workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

@@ -18,12 +18,17 @@ dav-xml = { path = "crates/dav-xml", version = "0.1.0" }
 http = "1"
 httpdate = "1"
 indexmap = "2"
+isahc = { version = "2", default-features = false }
 mime = "0.3"
 nonempty = "0.12"
 pretty_assertions = "1"
 quick-xml = "0.42"
+reqwest = { version = "0.13", default-features = false }
+serial_test = "3"
 thiserror = "2"
 time = "0.3"
+tokio = "1"
+ureq = { version = "3", default-features = false }
 
 [workspace.lints.rust]
 ambiguous_negative_literals = "warn"
