@@ -148,8 +148,8 @@ impl<W: std::io::Write> XmlWriter<W> {
             }
             Value::Map(map) => {
                 self.inner.write_event(Event::Start(start))?;
-                for (child, value) in map {
-                    self.write_value(&child, value)?;
+                for (child, value) in map.iter_ordered() {
+                    self.write_value(child, value)?;
                 }
                 self.inner
                     .write_event(Event::End(BytesEnd::new(raw_name)))?;
@@ -164,7 +164,7 @@ impl<W: std::io::Write> XmlWriter<W> {
         Ok(())
     }
 
-    fn write_value(&mut self, name: &ElementName<ByteString>, value: Value) -> Result<()> {
+    fn write_value(&mut self, name: &ElementName<ByteString>, value: &Value) -> Result<()> {
         let raw_name = self.qualified(name).into_owned();
         match value {
             Value::Empty => self
@@ -173,20 +173,20 @@ impl<W: std::io::Write> XmlWriter<W> {
             Value::Text(text) => {
                 self.inner
                     .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
-                self.inner.write_event(Event::Text(BytesText::new(&text)))?;
+                self.inner.write_event(Event::Text(BytesText::new(text)))?;
                 self.inner
                     .write_event(Event::End(BytesEnd::new(raw_name)))?;
             }
             Value::List(list) => {
-                for item in *list {
+                for item in list.iter() {
                     self.write_value(name, item)?;
                 }
             }
             Value::Map(map) => {
                 self.inner
                     .write_event(Event::Start(BytesStart::new(raw_name.as_str())))?;
-                for (child, value) in map {
-                    self.write_value(&child, value)?;
+                for (child, value) in map.iter_ordered() {
+                    self.write_value(child, value)?;
                 }
                 self.inner
                     .write_event(Event::End(BytesEnd::new(raw_name)))?;
@@ -256,6 +256,21 @@ mod tests {
 
         let xml = render(Value::Map(map));
         assert_eq!(xml.matches("<D:error").count(), 2);
+    }
+
+    #[test]
+    fn writes_interleaved_siblings_in_order() {
+        let mut map = ValueMap::new();
+        let alpha = name(DAV_NAMESPACE, DAV_PREFIX, "alpha");
+        map.insert_raw(alpha.clone(), Value::Text("first".into()));
+        map.insert_raw(name(DAV_NAMESPACE, DAV_PREFIX, "beta"), Value::Empty);
+        map.insert_raw(alpha, Value::Text("second".into()));
+
+        let xml = render(Value::Map(map));
+        let alpha_first = xml.find("<D:alpha>first</D:alpha>").unwrap();
+        let beta = xml.find("<D:beta/>").unwrap();
+        let alpha_second = xml.find("<D:alpha>second</D:alpha>").unwrap();
+        assert!(alpha_first < beta && beta < alpha_second, "{xml}");
     }
 
     #[test]

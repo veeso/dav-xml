@@ -171,14 +171,25 @@ where
 type InnerValueMap = IndexMap<ElementName<ByteString>, Value>;
 
 /// A mapping from tag names to [`Value`]s.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct ValueMap(pub(crate) InnerValueMap);
+#[derive(Clone, Debug, Default)]
+pub struct ValueMap {
+    values: InnerValueMap,
+    order: Vec<(ElementName<ByteString>, usize)>,
+}
+
+impl PartialEq for ValueMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.values == other.values
+    }
+}
+
+impl Eq for ValueMap {}
 
 impl ValueMap {
     /// Create an empty value map.
     #[must_use]
     pub fn new() -> Self {
-        Self(IndexMap::new())
+        Self::default()
     }
 
     /// Extract a child element of a specific type.
@@ -193,7 +204,7 @@ impl ValueMap {
     where
         E: Element + TryFrom<&'v Value, Error = Error>,
     {
-        self.0
+        self.values
             .get(&E::element_name::<&'static str>())
             .map(E::try_from)
     }
@@ -212,7 +223,7 @@ impl ValueMap {
     where
         E: Element + TryFrom<&'v Value, Error = Error>,
     {
-        self.0
+        self.values
             .get(&E::element_name::<&'static str>())
             .map(|value| match value {
                 Value::Empty => None,
@@ -240,7 +251,15 @@ impl ValueMap {
     /// Insert a child value into the map.
     pub fn insert<E: Element>(&mut self, value: Value) {
         let key = E::element_name();
-        self.0.insert(key, value);
+        let tracks_order = self.values.is_empty() || !self.order.is_empty();
+        self.values.insert(key.clone(), value);
+
+        if tracks_order {
+            self.order.retain(|(name, _)| name != &key);
+            if let Some((key, _)) = self.values.get_key_value(&key) {
+                self.order.push((key.clone(), 0));
+            }
+        }
     }
 }
 
@@ -267,7 +286,7 @@ impl ValueMap {
             }
         }
 
-        match self.0.get(&E::element_name::<&'static str>()) {
+        match self.values.get(&E::element_name::<&'static str>()) {
             Some(Value::List(list)) => ElementIter::List(list.iter()),
             Some(value) => ElementIter::Single(std::iter::once(value)),
             None => ElementIter::Empty,
@@ -290,44 +309,99 @@ impl ValueMap {
     /// Return the number of distinct child element names in this map.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.values.len()
     }
 
     /// Whether this map contains no child elements.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.values.is_empty()
     }
 
     /// Iterate over child names and values in document order.
     pub fn iter(&self) -> impl Iterator<Item = (&ElementName<ByteString>, &Value)> {
-        self.0.iter()
+        self.values.iter()
+    }
+
+    /// Iterate over children in their insertion order when it is available.
+    ///
+    /// Maps without insertion metadata fall back to their regular iteration
+    /// order.
+    pub fn iter_ordered(&self) -> impl Iterator<Item = (&ElementName<ByteString>, &Value)> {
+        self.order
+            .iter()
+            .filter_map(|(order_key, index)| {
+                self.values
+                    .get_key_value(order_key)
+                    .and_then(|(key, value)| match value {
+                        Value::List(list) => {
+                            let occurrence_count = self
+                                .order
+                                .iter()
+                                .filter(|(key, _)| key == order_key)
+                                .count();
+                            if occurrence_count == 1 {
+                                Some((key, value))
+                            } else {
+                                list.iter().nth(*index).map(|value| (key, value))
+                            }
+                        }
+                        value if *index == 0 => Some((key, value)),
+                        _ => None,
+                    })
+            })
+            .chain(
+                self.order
+                    .is_empty()
+                    .then_some(self.values.iter())
+                    .into_iter()
+                    .flatten(),
+            )
     }
 
     /// Append a raw child value, grouping duplicate names into a list.
     pub fn insert_raw(&mut self, key: ElementName<ByteString>, value: Value) {
-        match self.0.get_mut(&key) {
-            Some(Value::List(list)) => list.push(value),
-            Some(old_value) => {
-                let first = std::mem::take(old_value);
-                *old_value = Value::List(Box::new(nonempty![first, value]));
+        let tracks_order = self.values.is_empty() || !self.order.is_empty();
+        let index = match self.values.get(&key) {
+            Some(Value::List(values)) => values.len(),
+            Some(_) => 1,
+            None => 0,
+        };
+
+        let order_key = match self.values.entry(key) {
+            indexmap::map::Entry::Occupied(mut entry) => {
+                let order_key = tracks_order.then(|| entry.key().clone());
+                match entry.get_mut() {
+                    Value::List(list) => list.push(value),
+                    old_value => {
+                        let first = std::mem::take(old_value);
+                        *old_value = Value::List(Box::new(nonempty![first, value]));
+                    }
+                }
+                order_key
             }
-            None => {
-                self.0.insert(key, value);
+            indexmap::map::Entry::Vacant(entry) => {
+                let order_key = tracks_order.then(|| entry.key().clone());
+                entry.insert(value);
+                order_key
             }
+        };
+
+        if let Some(key) = order_key {
+            self.order.push((key, index));
         }
     }
 }
 
 impl AsRef<InnerValueMap> for ValueMap {
     fn as_ref(&self) -> &InnerValueMap {
-        &self.0
+        &self.values
     }
 }
 
 impl AsMut<InnerValueMap> for ValueMap {
     fn as_mut(&mut self) -> &mut InnerValueMap {
-        &mut self.0
+        &mut self.values
     }
 }
 
@@ -336,13 +410,16 @@ impl IntoIterator for ValueMap {
     type IntoIter = <InnerValueMap as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
+        self.values.into_iter()
     }
 }
 
 impl From<InnerValueMap> for ValueMap {
     fn from(map: InnerValueMap) -> Self {
-        Self(map)
+        Self {
+            values: map,
+            order: Vec::new(),
+        }
     }
 }
 
@@ -415,5 +492,86 @@ mod tests {
         map.insert::<Href>(Value::Text("/b".into()));
         assert_eq!(map.get_all::<Href>().unwrap().len(), 1);
         assert_eq!(map.get::<Href>().unwrap().unwrap().path(), "/b");
+    }
+
+    #[test]
+    fn iter_ordered_preserves_interleaving() {
+        let mut map = ValueMap::new();
+        let alpha = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "alpha".into(),
+        };
+        let beta = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "beta".into(),
+        };
+
+        map.insert_raw(alpha.clone(), Value::Text("first".into()));
+        map.insert_raw(beta, Value::Empty);
+        map.insert_raw(alpha, Value::Text("second".into()));
+
+        let children: Vec<_> = map
+            .iter_ordered()
+            .map(|(name, value)| (&*name.local_name, value.as_str().ok().map(|text| &**text)))
+            .collect();
+        assert_eq!(
+            children,
+            [
+                ("alpha", Some("first")),
+                ("beta", None),
+                ("alpha", Some("second"))
+            ]
+        );
+    }
+
+    #[test]
+    fn iter_ordered_falls_back_without_order_metadata() {
+        let alpha = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "alpha".into(),
+        };
+        let beta = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "beta".into(),
+        };
+        let map = ValueMap::from(IndexMap::from([
+            (alpha, Value::Text("first".into())),
+            (beta, Value::Empty),
+        ]));
+
+        let names: Vec<_> = map
+            .iter_ordered()
+            .map(|(name, _)| &*name.local_name)
+            .collect();
+        assert_eq!(names, ["alpha", "beta"]);
+    }
+
+    #[test]
+    fn equality_ignores_child_insertion_order() {
+        let alpha = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "alpha".into(),
+        };
+        let beta = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "beta".into(),
+        };
+        let mut first = ValueMap::new();
+        first.insert_raw(alpha.clone(), Value::Text("first".into()));
+        first.insert_raw(beta.clone(), Value::Empty);
+        first.insert_raw(alpha.clone(), Value::Text("second".into()));
+
+        let mut second = ValueMap::new();
+        second.insert_raw(alpha.clone(), Value::Text("first".into()));
+        second.insert_raw(alpha, Value::Text("second".into()));
+        second.insert_raw(beta, Value::Empty);
+
+        assert_eq!(first, second);
     }
 }

@@ -61,6 +61,12 @@ impl<S: PartialEq> PartialEq<ElementName<S>> for ElementName<S> {
     }
 }
 
+impl PartialEq<ElementName<&str>> for ElementName<bytestring::ByteString> {
+    fn eq(&self, other: &ElementName<&str>) -> bool {
+        self.namespace.as_deref() == other.namespace && &*self.local_name == other.local_name
+    }
+}
+
 impl<S: PartialEq> Eq for ElementName<S> {}
 
 impl<S: std::hash::Hash> std::hash::Hash for ElementName<S> {
