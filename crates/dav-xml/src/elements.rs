@@ -6,9 +6,12 @@
 
 mod allprop;
 mod collection;
+mod depth;
 mod exclusive;
 mod href;
 mod include;
+mod lockscope;
+mod locktype;
 mod multistatus;
 mod prop;
 mod propfind;
@@ -18,13 +21,17 @@ mod response;
 mod responsedescription;
 mod shared;
 mod status;
+mod timeout;
 mod write;
 
 pub use self::allprop::AllProp;
 pub use self::collection::Collection;
+pub use self::depth::{Depth, InvalidDepth};
 pub use self::exclusive::Exclusive;
 pub use self::href::Href;
 pub use self::include::Include;
+pub use self::lockscope::LockScope;
+pub use self::locktype::LockType;
 pub use self::multistatus::Multistatus;
 pub use self::prop::Prop;
 pub use self::propfind::PropFind;
@@ -34,4 +41,5 @@ pub use self::response::Response;
 pub use self::responsedescription::ResponseDescription;
 pub use self::shared::Shared;
 pub use self::status::{InvalidStatus, Status};
+pub use self::timeout::{InvalidTimeout, Timeout};
 pub use self::write::Write;
