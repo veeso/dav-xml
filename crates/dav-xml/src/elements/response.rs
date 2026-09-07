@@ -233,4 +233,40 @@ mod tests {
             response
         );
     }
+
+    #[test]
+    fn parses_optional_children_on_propstat_variant_in_rfc_order() {
+        let xml = br#"<D:response xmlns:D="DAV:"><D:href>/a</D:href><D:propstat><D:prop><D:x/></D:prop><D:status>HTTP/1.1 403 Forbidden</D:status></D:propstat><D:error><D:cannot-modify-protected-property/></D:error><D:responsedescription>protected</D:responsedescription><D:location><D:href>http://x/b</D:href></D:location></D:response>"#;
+        let response = Response::from_xml(xml.to_vec()).unwrap();
+        assert!(
+            response
+                .error()
+                .unwrap()
+                .contains("cannot-modify-protected-property")
+        );
+        let Response::Propstat {
+            responsedescription: Some(responsedescription),
+            location: Some(location),
+            ..
+        } = &response
+        else {
+            panic!("expected propstat response with optional children")
+        };
+        assert_eq!(responsedescription.0, "protected");
+        assert_eq!(location.0.path(), "/b");
+
+        let output = response.clone().into_xml().unwrap();
+        assert_eq!(Response::from_xml(output.clone()).unwrap(), response);
+
+        let output = String::from_utf8(output.to_vec()).unwrap();
+        let positions = [
+            "<D:href>",
+            "<D:propstat>",
+            "<D:error>",
+            "<D:responsedescription>",
+            "<D:location>",
+        ]
+        .map(|child| output.find(child).unwrap());
+        assert!(positions.windows(2).all(|pair| pair[0] < pair[1]));
+    }
 }
