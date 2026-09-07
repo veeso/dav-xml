@@ -43,10 +43,10 @@ jobs:
             exit 1
           fi
 
-          package_version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          mapfile -t versions < <(cargo metadata --no-deps --format-version 1 | jq -r '.packages[].version' | sort -u)
 
-          if [[ "$package_version" != "$VERSION" ]]; then
-            echo "::error::Cargo.toml version is $package_version, expected $VERSION."
+          if [[ "${#versions[@]}" -ne 1 || "${versions[0]}" != "$VERSION" ]]; then
+            echo "::error::Workspace crate versions are ${versions[*]}, expected exactly $VERSION."
             exit 1
           fi
 
