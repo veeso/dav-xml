@@ -323,23 +323,16 @@ impl<W: std::io::Write> XmlWriter<W> {
         Ok(())
     }
 
-    fn write_content_item(&mut self, item: &ContentItem) -> Result<()> {
-        match item {
-            ContentItem::Text(text) => self.inner.write_event(Event::Text(BytesText::new(text)))?,
-            ContentItem::Element { name, value } => self.write_value(name, value)?,
-        }
-        Ok(())
-    }
-
     fn write_mixed(&mut self, items: &[ContentItem]) -> Result<()> {
-        if matches!(items.first(), Some(ContentItem::Element { .. })) {
-            self.inner.write_event(Event::Text(BytesText::new("")))?;
-        }
         for item in items {
-            self.write_content_item(item)?;
-        }
-        if matches!(items.last(), Some(ContentItem::Element { .. })) {
-            self.inner.write_event(Event::Text(BytesText::new("")))?;
+            match item {
+                ContentItem::Text(text) => {
+                    self.inner.write_event(Event::Text(BytesText::new(text)))?;
+                }
+                ContentItem::Element { name, value } => {
+                    self.write_value_without_indent(name, value)?;
+                }
+            }
         }
         Ok(())
     }

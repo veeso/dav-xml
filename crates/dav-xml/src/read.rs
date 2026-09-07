@@ -280,18 +280,11 @@ fn is_prop_name(name: &ElementName<ByteString>) -> bool {
 fn child_mode(mode: ReadMode, name: &ElementName<ByteString>) -> ReadMode {
     match mode {
         ReadMode::Mixed => ReadMode::Mixed,
-        ReadMode::Prop => {
+        ReadMode::Prop | ReadMode::Property => {
             if is_owner_name(name) {
                 ReadMode::Mixed
             } else {
                 ReadMode::Property
-            }
-        }
-        ReadMode::Property => {
-            if is_owner_name(name) {
-                ReadMode::Mixed
-            } else {
-                ReadMode::Structured
             }
         }
         ReadMode::Structured => {
@@ -314,26 +307,31 @@ fn property_value(items: Vec<ContentItem>) -> Value {
         matches!(item, ContentItem::Text(text) if text.chars().any(|character| !character.is_whitespace()))
     });
 
-    match (has_element, first_significant_text) {
-        (false, None) => Value::Map(ValueMap::new()),
-        (false, Some(index)) => Value::Text(
-            items
-                .into_iter()
-                .skip(index)
-                .filter_map(|item| match item {
-                    ContentItem::Text(text) => Some(text.to_string()),
-                    ContentItem::Element { .. } => None,
-                })
-                .collect::<String>()
-                .into(),
-        ),
-        (true, None) => mixed_value(
+    if !has_element {
+        return if items.is_empty() {
+            Value::Map(ValueMap::new())
+        } else {
+            Value::Text(
+                items
+                    .into_iter()
+                    .filter_map(|item| match item {
+                        ContentItem::Text(text) => Some(text.to_string()),
+                        ContentItem::Element { .. } => None,
+                    })
+                    .collect::<String>()
+                    .into(),
+            )
+        };
+    }
+
+    match first_significant_text {
+        None => mixed_value(
             items
                 .into_iter()
                 .filter(|item| matches!(item, ContentItem::Element { .. }))
                 .collect(),
         ),
-        (true, Some(_)) => Value::Mixed(items),
+        Some(_) => Value::Mixed(items),
     }
 }
 
