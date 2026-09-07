@@ -286,6 +286,32 @@ mod tests {
     }
 
     #[test]
+    fn preserves_repeated_conditions_after_mutable_access() {
+        let value = DavError {
+            conditions: vec![
+                Condition::PropfindFiniteDepth,
+                Condition::PropfindFiniteDepth,
+                Condition::LockTokenMatchesRequestUri,
+            ],
+        };
+        let Value::Map(mut map) = Value::from(value) else {
+            panic!();
+        };
+        map.as_mut();
+
+        let error = DavError::try_from(&Value::Map(map)).unwrap();
+
+        assert_eq!(
+            error.conditions,
+            vec![
+                Condition::PropfindFiniteDepth,
+                Condition::PropfindFiniteDepth,
+                Condition::LockTokenMatchesRequestUri,
+            ]
+        );
+    }
+
+    #[test]
     fn serializes_empty_lock_token_submitted_from_rfc_examples() {
         let error = DavError::single(Condition::LockTokenSubmitted(Vec::new()));
         assert_eq!(

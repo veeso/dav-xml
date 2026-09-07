@@ -389,6 +389,22 @@ impl ValueMap {
     /// assert_eq!(map.iter_ordered().count(), 1);
     /// ```
     pub fn iter_ordered(&self) -> impl Iterator<Item = (&ElementName<ByteString>, &Value)> {
+        enum ValueIter<'a> {
+            List(nonempty::Iter<'a, Value>),
+            Single(std::iter::Once<&'a Value>),
+        }
+
+        impl<'a> Iterator for ValueIter<'a> {
+            type Item = &'a Value;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                match self {
+                    Self::List(inner) => inner.next(),
+                    Self::Single(inner) => inner.next(),
+                }
+            }
+        }
+
         self.order
             .iter()
             .filter_map(|(order_key, index)| {
@@ -403,7 +419,13 @@ impl ValueMap {
             .chain(
                 self.order
                     .is_empty()
-                    .then_some(self.values.iter())
+                    .then_some(self.values.iter().flat_map(|(key, value)| {
+                        let values = match value {
+                            Value::List(list) => ValueIter::List(list.iter()),
+                            value => ValueIter::Single(std::iter::once(value)),
+                        };
+                        values.map(move |value| (key, value))
+                    }))
                     .into_iter()
                     .flatten(),
             )
@@ -607,6 +629,48 @@ mod tests {
             .map(|(name, _)| &*name.local_name)
             .collect();
         assert_eq!(names, ["alpha", "beta"]);
+    }
+
+    #[test]
+    fn iter_ordered_fallback_expands_grouped_values() {
+        let alpha = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "alpha".into(),
+        };
+        let beta = ElementName {
+            namespace: Some("DAV:".into()),
+            prefix: None,
+            local_name: "beta".into(),
+        };
+        let map = ValueMap::from(IndexMap::from([
+            (
+                alpha,
+                Value::List(Box::new(nonempty::nonempty![
+                    Value::Text("first".into()),
+                    Value::Text("second".into()),
+                ])),
+            ),
+            (beta, Value::Empty),
+        ]));
+
+        let children: Vec<_> = map
+            .iter_ordered()
+            .map(|(name, value)| {
+                (
+                    name.local_name.to_string(),
+                    value.as_str().map(ToString::to_string).ok(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            children,
+            [
+                ("alpha".to_owned(), Some("first".to_owned())),
+                ("alpha".to_owned(), Some("second".to_owned())),
+                ("beta".to_owned(), None),
+            ]
+        );
     }
 
     #[test]
