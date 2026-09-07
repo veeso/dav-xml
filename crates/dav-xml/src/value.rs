@@ -252,12 +252,17 @@ impl ValueMap {
     pub fn insert<E: Element>(&mut self, value: Value) {
         let key = E::element_name();
         let tracks_order = self.values.is_empty() || !self.order.is_empty();
+        let occurrence_count = match &value {
+            Value::List(values) => values.len(),
+            Value::Empty | Value::Text(_) | Value::Map(_) => 1,
+        };
         self.values.insert(key.clone(), value);
 
         if tracks_order {
             self.order.retain(|(name, _)| name != &key);
             if let Some((key, _)) = self.values.get_key_value(&key) {
-                self.order.push((key.clone(), 0));
+                self.order
+                    .extend((0..occurrence_count).map(|index| (key.clone(), index)));
             }
         }
     }
@@ -327,6 +332,23 @@ impl ValueMap {
     ///
     /// Maps without insertion metadata fall back to their regular iteration
     /// order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::{ElementName, Value, ValueMap};
+    ///
+    /// let mut map = ValueMap::new();
+    /// map.insert_raw(
+    ///     ElementName {
+    ///         namespace: None,
+    ///         prefix: None,
+    ///         local_name: "example".into(),
+    ///     },
+    ///     Value::Empty,
+    /// );
+    /// assert_eq!(map.iter_ordered().count(), 1);
+    /// ```
     pub fn iter_ordered(&self) -> impl Iterator<Item = (&ElementName<ByteString>, &Value)> {
         self.order
             .iter()

@@ -213,6 +213,14 @@ mod tests {
         const LOCAL_NAME: &'static str = "root";
     }
 
+    struct Alpha;
+
+    impl Element for Alpha {
+        const NAMESPACE: &'static str = DAV_NAMESPACE;
+        const PREFIX: &'static str = DAV_PREFIX;
+        const LOCAL_NAME: &'static str = "alpha";
+    }
+
     fn name(ns: &str, prefix: &str, local: &str) -> ElementName<ByteString> {
         ElementName {
             namespace: Some(ns.into()),
@@ -271,6 +279,28 @@ mod tests {
         let beta = xml.find("<D:beta/>").unwrap();
         let alpha_second = xml.find("<D:alpha>second</D:alpha>").unwrap();
         assert!(alpha_first < beta && beta < alpha_second, "{xml}");
+    }
+
+    #[test]
+    fn writes_list_then_raw_siblings_in_order() {
+        let mut map = ValueMap::new();
+        map.insert::<Alpha>(Value::List(Box::new(nonempty::nonempty![
+            Value::Text("first".into()),
+            Value::Text("second".into())
+        ])));
+        map.insert_raw(
+            name(DAV_NAMESPACE, DAV_PREFIX, Alpha::LOCAL_NAME),
+            Value::Text("third".into()),
+        );
+
+        let xml = render(Value::Map(map));
+        assert!(xml.contains("<D:alpha>first</D:alpha>"), "{xml}");
+        assert!(xml.contains("<D:alpha>second</D:alpha>"), "{xml}");
+        assert!(xml.contains("<D:alpha>third</D:alpha>"), "{xml}");
+        let first = xml.find("<D:alpha>first</D:alpha>").unwrap();
+        let second = xml.find("<D:alpha>second</D:alpha>").unwrap();
+        let third = xml.find("<D:alpha>third</D:alpha>").unwrap();
+        assert!(first < second && second < third, "{xml}");
     }
 
     #[test]

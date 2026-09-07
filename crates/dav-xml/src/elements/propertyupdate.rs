@@ -40,12 +40,32 @@ impl Element for PropertyUpdate {
 
 impl PropertyUpdate {
     /// Create an empty property update.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::PropertyUpdate;
+    ///
+    /// let update = PropertyUpdate::new();
+    /// assert!(update.0.is_empty());
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Append a `set` instruction.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::{Prop, PropertyUpdate};
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let update = PropertyUpdate::new()
+    ///     .set(Prop::builder().property(DisplayName("Notes".into())).build());
+    /// assert_eq!(update.0.len(), 1);
+    /// ```
     #[must_use]
     pub fn set(mut self, prop: Prop) -> Self {
         self.0.push(PropertyUpdateItem::Set(Set(prop)));
@@ -53,6 +73,17 @@ impl PropertyUpdate {
     }
 
     /// Append a `remove` instruction.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::{Prop, PropertyUpdate};
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let update = PropertyUpdate::new()
+    ///     .remove(Prop::builder().name::<DisplayName>().build());
+    /// assert_eq!(update.0.len(), 1);
+    /// ```
     #[must_use]
     pub fn remove(mut self, prop: Prop) -> Self {
         self.0.push(PropertyUpdateItem::Remove(Remove(prop)));
