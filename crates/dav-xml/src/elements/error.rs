@@ -31,6 +31,15 @@ pub struct DavError {
 
 /// A precondition or postcondition code
 /// ([RFC 4918 section 16](https://www.rfc-editor.org/rfc/rfc4918#section-16)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::{Condition, Href};
+///
+/// let condition = Condition::LockTokenSubmitted(vec!["/locked".parse::<Href>().unwrap()]);
+/// assert_eq!(condition.name(), "lock-token-submitted");
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum Condition {
@@ -80,6 +89,17 @@ impl Condition {
         }
     }
 
+    fn lock_token_submitted_hrefs(value: &Value) -> Result<Vec<Href>, Error> {
+        let hrefs = Self::hrefs(value)?;
+        if hrefs.is_empty() {
+            return Err(Error::MissingElement {
+                parent: "lock-token-submitted",
+                element: Href::LOCAL_NAME,
+            });
+        }
+        Ok(hrefs)
+    }
+
     fn from_entry(name: &ElementName<ByteString>, value: &Value) -> Result<Self, Error> {
         if name.namespace.as_deref() != Some(DAV_NAMESPACE) {
             return Ok(Self::Other {
@@ -90,7 +110,9 @@ impl Condition {
 
         Ok(match &*name.local_name {
             "lock-token-matches-request-uri" => Self::LockTokenMatchesRequestUri,
-            "lock-token-submitted" => Self::LockTokenSubmitted(Self::hrefs(value)?),
+            "lock-token-submitted" => {
+                Self::LockTokenSubmitted(Self::lock_token_submitted_hrefs(value)?)
+            }
             "no-conflicting-lock" => Self::NoConflictingLock(Self::hrefs(value)?),
             "no-external-entities" => Self::NoExternalEntities,
             "preserved-live-properties" => Self::PreservedLiveProperties,
@@ -149,6 +171,18 @@ impl Element for DavError {
     const NAMESPACE: &'static str = DAV_NAMESPACE;
     const PREFIX: &'static str = DAV_PREFIX;
     const LOCAL_NAME: &'static str = "error";
+
+    fn validate(&self) -> crate::Result<()> {
+        if self.conditions.iter().any(|condition| {
+            matches!(condition, Condition::LockTokenSubmitted(hrefs) if hrefs.is_empty())
+        }) {
+            return Err(Error::MissingElement {
+                parent: "lock-token-submitted",
+                element: Href::LOCAL_NAME,
+            });
+        }
+        Ok(())
+    }
 }
 
 impl TryFrom<&Value> for DavError {
@@ -251,12 +285,82 @@ mod tests {
     }
 
     #[test]
+    fn rejects_empty_lock_token_submitted() {
+        let error = DavError::from_xml(
+            br#"<D:error xmlns:D="DAV:"><D:lock-token-submitted/></D:error>"#.to_vec(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            error,
+            Error::MissingElement {
+                parent: "lock-token-submitted",
+                element: "href",
+            }
+        ));
+    }
+
+    #[test]
+    fn refuses_to_serialize_empty_lock_token_submitted() {
+        let error = DavError::single(Condition::LockTokenSubmitted(Vec::new()))
+            .into_xml()
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            Error::MissingElement {
+                parent: "lock-token-submitted",
+                element: "href",
+            }
+        ));
+    }
+
+    #[test]
+    fn parses_multiple_lock_token_submitted_hrefs() {
+        let error = DavError::from_xml(
+            br#"<D:error xmlns:D="DAV:"><D:lock-token-submitted><D:href>/a</D:href><D:href>/b</D:href></D:lock-token-submitted></D:error>"#.to_vec(),
+        )
+        .unwrap();
+        let Condition::LockTokenSubmitted(hrefs) = &error.conditions[0] else {
+            panic!();
+        };
+        assert_eq!(
+            hrefs.iter().map(Href::path).collect::<Vec<_>>(),
+            vec!["/a", "/b"]
+        );
+    }
+
+    #[test]
+    fn round_trips_raw_lock_token_submitted_href() {
+        let error = DavError::from_xml(
+            br#"<D:error xmlns:D="DAV:"><D:lock-token-submitted><D:href>urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4</D:href></D:lock-token-submitted></D:error>"#.to_vec(),
+        )
+        .unwrap();
+        assert!(matches!(
+            error.conditions[0],
+            Condition::LockTokenSubmitted(ref hrefs) if matches!(hrefs.as_slice(), [Href::Raw(value)] if value == "urn:uuid:e71d4fae-5dec-22d6-fea5-00a0c91e6be4")
+        ));
+        assert_eq!(
+            DavError::from_xml(error.clone().into_xml().unwrap()).unwrap(),
+            error
+        );
+    }
+
+    #[test]
     fn unknown_conditions_are_kept() {
         let xml = br#"<D:error xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><C:valid-calendar-data/></D:error>"#;
         let error = DavError::from_xml(xml.to_vec()).unwrap();
         assert_eq!(error.conditions[0].name(), "valid-calendar-data");
         assert!(
             matches!(&error.conditions[0], Condition::Other { name, .. } if name.namespace.as_deref() == Some("urn:ietf:params:xml:ns:caldav"))
+        );
+    }
+
+    #[test]
+    fn round_trips_unknown_condition_raw_value() {
+        let xml = br#"<D:error xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><C:valid-calendar-data>opaque-value</C:valid-calendar-data></D:error>"#;
+        let error = DavError::from_xml(xml.to_vec()).unwrap();
+        assert_eq!(
+            DavError::from_xml(error.clone().into_xml().unwrap()).unwrap(),
+            error
         );
     }
 
