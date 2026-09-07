@@ -33,7 +33,7 @@ mod tests {
             format!("Second-{maximum}").parse::<Timeout>().unwrap(),
             Timeout::Seconds(maximum)
         );
-        format!("Second-{}", maximum + 1)
+        format!("Second-{seconds}", seconds = maximum + 1)
             .parse::<Timeout>()
             .unwrap_err();
     }
@@ -60,7 +60,7 @@ mod tests {
     fn displays_only_rfc_valid_seconds() {
         assert_eq!(
             Timeout::Seconds(u64::from(u32::MAX) + 1).to_string(),
-            format!("Second-{}", u64::from(u32::MAX))
+            format!("Second-{seconds}", seconds = u64::from(u32::MAX))
         );
     }
 
@@ -146,7 +146,11 @@ impl Display for Timeout {
         match self {
             Self::Infinite => f.write_str("Infinite"),
             Self::Seconds(seconds) => {
-                write!(f, "Second-{}", (*seconds).min(Self::MAX_SECONDS))
+                write!(
+                    f,
+                    "Second-{seconds}",
+                    seconds = (*seconds).min(Self::MAX_SECONDS)
+                )
             }
         }
     }
