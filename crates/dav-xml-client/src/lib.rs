@@ -20,6 +20,7 @@ pub use dav_xml::DAV_NAMESPACE;
 pub mod auth;
 pub mod error;
 pub mod headers;
+pub(crate) mod request;
 pub(crate) mod response;
 pub mod transport;
 
