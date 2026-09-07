@@ -385,6 +385,19 @@ mod tests {
     }
 
     #[test]
+    fn round_trips_unknown_condition_child_value() {
+        let xml = br#"<D:error xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <C:valid-calendar-data><C:detail/><C:other/></C:valid-calendar-data>
+</D:error>"#;
+        let error = DavError::from_xml(xml.to_vec()).unwrap();
+
+        assert_eq!(
+            DavError::from_xml(error.clone().into_xml().unwrap()).unwrap(),
+            error
+        );
+    }
+
+    #[test]
     fn empty_error_has_no_conditions() {
         let error = DavError::from_xml(br#"<D:error xmlns:D="DAV:"/>"#.to_vec()).unwrap();
         assert!(error.conditions.is_empty());

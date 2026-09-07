@@ -189,6 +189,16 @@ impl<W: std::io::Write> XmlWriter<W> {
                         self.write_value_without_indent(child, value)?;
                     }
                     self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+                } else if is_error_name(name) {
+                    for (child, value) in map.iter_ordered() {
+                        if is_known_condition_name(child) {
+                            self.write_value(child, value)?;
+                        } else {
+                            self.write_value_without_indent(child, value)?;
+                        }
+                    }
+                    self.inner
+                        .write_event(Event::End(BytesEnd::new(raw_name)))?;
                 } else {
                     for (child, value) in map.iter_ordered() {
                         self.write_value(child, value)?;
@@ -247,6 +257,16 @@ impl<W: std::io::Write> XmlWriter<W> {
                         self.write_value_without_indent(child, value)?;
                     }
                     self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+                } else if is_error_name(name) {
+                    for (child, value) in map.iter_ordered() {
+                        if is_known_condition_name(child) {
+                            self.write_value(child, value)?;
+                        } else {
+                            self.write_value_without_indent(child, value)?;
+                        }
+                    }
+                    self.inner
+                        .write_event(Event::End(BytesEnd::new(raw_name)))?;
                 } else {
                     for (child, value) in map.iter_ordered() {
                         self.write_value(child, value)?;
@@ -381,6 +401,20 @@ fn is_prop_name(name: &ElementName<ByteString>) -> bool {
 
 fn is_error_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == DavError::LOCAL_NAME
+}
+
+fn is_known_condition_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(DAV_NAMESPACE)
+        && matches!(
+            name.local_name.as_ref(),
+            "lock-token-matches-request-uri"
+                | "lock-token-submitted"
+                | "no-conflicting-lock"
+                | "no-external-entities"
+                | "preserved-live-properties"
+                | "propfind-finite-depth"
+                | "cannot-modify-protected-property"
+        )
 }
 
 #[cfg(test)]
