@@ -174,15 +174,8 @@ impl TryFrom<&Value> for DavError {
             other => other.as_map_of::<Self>()?,
         };
         let mut conditions = Vec::new();
-        for (name, value) in map.iter() {
-            match value {
-                Value::List(list) => {
-                    for item in list.iter() {
-                        conditions.push(Condition::from_entry(name, item)?);
-                    }
-                }
-                single => conditions.push(Condition::from_entry(name, single)?),
-            }
+        for (name, value) in map.iter_ordered() {
+            conditions.push(Condition::from_entry(name, value)?);
         }
         Ok(Self { conditions })
     }
@@ -273,6 +266,22 @@ mod tests {
         assert_eq!(
             error.conditions,
             vec![Condition::LockTokenSubmitted(Vec::new())]
+        );
+    }
+
+    #[test]
+    fn preserves_interleaved_duplicate_conditions_in_document_order() {
+        let error = DavError::from_xml(
+            br#"<D:error xmlns:D="DAV:"><D:propfind-finite-depth/><D:lock-token-matches-request-uri/><D:propfind-finite-depth/></D:error>"#.to_vec(),
+        )
+        .unwrap();
+        assert_eq!(
+            error.conditions,
+            vec![
+                Condition::PropfindFiniteDepth,
+                Condition::LockTokenMatchesRequestUri,
+                Condition::PropfindFiniteDepth,
+            ]
         );
     }
 
