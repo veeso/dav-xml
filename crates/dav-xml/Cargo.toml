@@ -27,6 +27,7 @@ time = { workspace = true, features = ["formatting", "parsing"] }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+time = { workspace = true, features = ["formatting", "macros", "parsing"] }
 
 [lib]
 name = "dav_xml"
