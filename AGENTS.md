@@ -5,7 +5,7 @@ Guidance for coding agents working in this repository.
 ## Project context
 
 This repository is a Rust workspace containing the `dav-xml` XML library and
-the `dav-xml-client` placeholder library. `dav-xml` derives from the
+the `dav-xml-client` sync and async WebDAV client. `dav-xml` derives from the
 `webdav-xml` crate by d-k-bo; migrated files retain their upstream SPDX
 copyright header alongside the project copyright header.
 
@@ -34,8 +34,11 @@ The toolchain is pinned to Rust 1.98.0 with edition 2024. Keep
 - `crates/dav-xml/src/elements.rs` and `elements/` contain RFC 4918 elements.
 - `crates/dav-xml/src/properties.rs` and `properties/` contain RFC 4918
   properties.
-- `crates/dav-xml-client/src/lib.rs` is a library-only placeholder for the
-  future client implementation.
+- `crates/dav-xml-client/src/lib.rs` contains the public client API and crate
+  docs (included from `crates/dav-xml-client/README.md`).
+- `crates/dav-xml-client/src/client.rs` and `async_client.rs` hold
+  `DavClient` and `AsyncDavClient`; both share the same method set over a
+  `Transport`/`AsyncTransport` abstraction in `transport.rs`.
 - Use `module_name.rs`; never introduce `mod.rs`.
 
 ## Rust conventions
@@ -82,6 +85,40 @@ workspace test suite.
 When invoking compilation or test commands from the CLI, never request
 parallelism greater than eight. This is an invocation constraint; do not encode
 the local cap in tracked project files.
+
+### `dav-xml-client` feature matrix
+
+`dav-xml-client` gates each HTTP backend behind a Cargo feature so
+downstream crates only build the dependencies they need:
+
+| Feature      | Enables                                                                    | Default |
+| ------------ | -------------------------------------------------------------------------- | ------- |
+| `reqwest`    | `AsyncDavClient::reqwest`, an async backend for `tokio`.                   | yes     |
+| `ureq`       | `DavClient::ureq`, a blocking backend with no async runtime.               | no      |
+| `isahc`      | `DavClient::isahc` and `AsyncDavClient::isahc`, libcurl for sync or async. | no      |
+| `native-tls` | Platform TLS for the `reqwest` and `ureq` backends.                        | no      |
+| `rustls`     | rustls for the `reqwest` and `ureq` backends.                              | no      |
+| `mock`       | `transport::MockTransport`, for downstream tests.                          | no      |
+| `containers` | Docker-backed integration tests in `tests/containers.rs`; pulls in `mock`. | no      |
+
+`isahc` always builds with its own bundled `default-tls`; `native-tls` and
+`rustls` only affect `reqwest` and `ureq`.
+
+Building `dav-xml-client` with the `isahc` feature (including any
+`--all-features` build) compiles `curl-sys` from source and requires a C
+toolchain (`cc`, `make`) on the machine. GitHub-hosted CI runners ship one by
+default; install `build-essential` (Debian/Ubuntu), Xcode Command Line Tools
+(macOS), or a Visual Studio Build Tools install (Windows) locally if the
+build fails to find a C compiler.
+
+Exercise the feature matrix and the container-backed integration tests with:
+
+```sh
+just test_features   # every backend feature combination, mocked transport
+just containers_up   # start the WebDAV container used by containers tests
+just test_containers # full verb sequence against the running container
+just containers_down # stop and remove the container
+```
 
 ## Required tools
 

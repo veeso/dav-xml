@@ -28,6 +28,10 @@ just setup_githooks        # point core.hooksPath at .githooks
 just changelog_preview 0.1.0
 just changelog 0.1.0
 just publish "--dry-run --allow-dirty"
+just test_features         # every dav-xml-client backend feature combination
+just containers_up         # start the WebDAV container for the containers tests
+just test_containers       # full verb sequence against the running container
+just containers_down       # stop and remove the container
 ```
 
 `just check` is the required gate before declaring work done. It chains
@@ -52,9 +56,23 @@ This workspace separates the reusable WebDAV XML model from the HTTP client
 that will consume it.
 
 - **Package shape.** `crates/dav-xml` is a library-only crate exposing the
-  generic XML value tree, RFC 4918 elements, and properties. The
-  `crates/dav-xml-client` library is currently a documented placeholder and
-  will be implemented by the client plan.
+  generic XML value tree, RFC 4918 elements, and properties.
+  `crates/dav-xml-client` is a sync and async WebDAV client built on top of
+  it, with `DavClient` and `AsyncDavClient` sharing one method set over a
+  `Transport`/`AsyncTransport` abstraction.
+- **`dav-xml-client` feature matrix.** Each HTTP backend is gated behind a
+  Cargo feature: `reqwest` (async, `tokio`, default), `ureq` (blocking, no
+  runtime), `isahc` (libcurl, sync or async), `native-tls` and `rustls`
+  (TLS passthrough for `reqwest`/`ureq` only — `isahc` always bundles its own
+  `default-tls`), `mock` (`transport::MockTransport` for downstream tests),
+  and `containers` (Docker-backed integration tests, pulls in `mock`).
+  Building with `isahc` — including any `--all-features` build — compiles
+  `curl-sys` from source and requires a C toolchain (`cc`, `make`) on the
+  machine; GitHub-hosted CI runners have one preinstalled.
+  `just test_features` runs the workspace test suite across the backend
+  feature combinations; `just containers_up`, `just test_containers`, and
+  `just containers_down` manage and exercise the Docker-backed integration
+  tests.
 - **XML model.** `dav-xml` parses XML into an untyped `Value` tree. Typed
   elements implement `Element` and conversions to and from `Value`, which
   provide the `FromXml` and `IntoXml` APIs. Namespaced properties remain
