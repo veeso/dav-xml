@@ -39,7 +39,10 @@ fn validate_value(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
             map.iter()
                 .try_for_each(|(child, value)| validate_value(child, value))
         }
-        Value::Mixed(items) => items.iter().try_for_each(validate_content_item),
+        Value::Mixed(items) => {
+            validate_error(name, value)?;
+            items.iter().try_for_each(validate_content_item)
+        }
     }
 }
 
@@ -163,17 +166,29 @@ impl<W: std::io::Write> XmlWriter<W> {
             }
             Value::Map(map) => {
                 self.inner.write_event(Event::Start(start))?;
-                for (child, value) in map.iter_ordered() {
-                    self.write_value(child, value)?;
+                if is_owner_name(name) {
+                    for (child, value) in map.iter_ordered() {
+                        self.write_value_without_indent(child, value)?;
+                    }
+                    self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+                } else {
+                    for (child, value) in map.iter_ordered() {
+                        self.write_value(child, value)?;
+                    }
+                    self.inner
+                        .write_event(Event::End(BytesEnd::new(raw_name)))?;
                 }
-                self.inner
-                    .write_event(Event::End(BytesEnd::new(raw_name)))?;
             }
             Value::Mixed(items) => {
                 self.inner.write_event(Event::Start(start))?;
-                self.write_mixed(&items)?;
-                self.inner
-                    .write_event(Event::End(BytesEnd::new(raw_name)))?;
+                if is_owner_name(name) {
+                    self.write_mixed_without_indent(&items)?;
+                    self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+                } else {
+                    self.write_mixed(&items)?;
+                    self.inner
+                        .write_event(Event::End(BytesEnd::new(raw_name)))?;
+                }
             }
             Value::List(_) => {
                 return Err(Error::InvalidValueType {
@@ -186,6 +201,10 @@ impl<W: std::io::Write> XmlWriter<W> {
     }
 
     fn write_value(&mut self, name: &ElementName<ByteString>, value: &Value) -> Result<()> {
+        if is_owner_name(name) {
+            return self.write_value_without_indent(name, value);
+        }
+
         let raw_name = self.qualified(name).into_owned();
         match value {
             Value::Empty => self
@@ -223,6 +242,48 @@ impl<W: std::io::Write> XmlWriter<W> {
         Ok(())
     }
 
+    fn write_value_without_indent(
+        &mut self,
+        name: &ElementName<ByteString>,
+        value: &Value,
+    ) -> Result<()> {
+        let raw_name = self.qualified(name).into_owned();
+        match value {
+            Value::Empty => {
+                self.write_event_without_indent(Event::Empty(BytesStart::new(raw_name)))?;
+            }
+            Value::Text(text) => {
+                self.write_event_without_indent(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                self.inner.write_event(Event::Text(BytesText::new(text)))?;
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+            }
+            Value::List(list) => {
+                for item in list.iter() {
+                    self.write_value_without_indent(name, item)?;
+                }
+            }
+            Value::Map(map) => {
+                self.write_event_without_indent(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                for (child, value) in map.iter_ordered() {
+                    self.write_value_without_indent(child, value)?;
+                }
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+            }
+            Value::Mixed(items) => {
+                self.write_event_without_indent(Event::Start(BytesStart::new(raw_name.as_str())))?;
+                self.write_mixed_without_indent(items)?;
+                self.write_event_without_indent(Event::End(BytesEnd::new(raw_name)))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn write_event_without_indent(&mut self, event: Event<'_>) -> Result<()> {
+        self.inner.write_event(Event::Text(BytesText::new("")))?;
+        self.inner.write_event(event)?;
+        Ok(())
+    }
+
     fn write_content_item(&mut self, item: &ContentItem) -> Result<()> {
         match item {
             ContentItem::Text(text) => self.inner.write_event(Event::Text(BytesText::new(text)))?,
@@ -243,6 +304,24 @@ impl<W: std::io::Write> XmlWriter<W> {
         }
         Ok(())
     }
+
+    fn write_mixed_without_indent(&mut self, items: &[ContentItem]) -> Result<()> {
+        for item in items {
+            match item {
+                ContentItem::Text(text) => {
+                    self.inner.write_event(Event::Text(BytesText::new(text)))?;
+                }
+                ContentItem::Element { name, value } => {
+                    self.write_value_without_indent(name, value)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+fn is_owner_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == "owner"
 }
 
 #[cfg(test)]
@@ -411,6 +490,28 @@ mod tests {
             Error::InvalidValueType {
                 element: "root",
                 ..
+            }
+        ));
+    }
+
+    #[test]
+    fn mixed_error_is_validated_as_an_error_container() {
+        let mut map = ValueMap::new();
+        map.insert_raw(
+            name(DAV_NAMESPACE, DAV_PREFIX, DavError::LOCAL_NAME),
+            Value::Mixed(vec![ContentItem::Element {
+                name: name(DAV_NAMESPACE, DAV_PREFIX, "propfind-finite-depth"),
+                value: Value::Empty,
+            }]),
+        );
+
+        let mut out = Vec::new();
+        let error = write_xml::<Root>(&mut out, Value::Map(map)).unwrap_err();
+        assert!(matches!(
+            error,
+            Error::InvalidValueType {
+                element: "error",
+                expected: "child elements",
             }
         ));
     }
