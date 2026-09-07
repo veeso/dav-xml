@@ -1,12 +1,12 @@
 # Build every target in debug mode.
 [group('build')]
 build args="":
-  cargo build --all-targets {{ args }}
+  cargo build --workspace --all-targets {{ args }}
 
 # Build every target in release mode.
 [group('build')]
 release args="":
-  cargo build --all-targets --release {{ args }}
+  cargo build --workspace --all-targets --release {{ args }}
 
 # Remove Cargo build artifacts.
 [group('build')]

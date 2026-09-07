@@ -1,43 +1,41 @@
-[package]
-name = "rust-template"
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 authors = ["Christian Visintin <christian.visintin@veeso.dev>"]
-categories = ["development-tools"]
 edition = "2024"
-homepage = "https://github.com/veeso/rust-template"
-include = [
-  "/CHANGELOG.md",
-  "/Cargo.lock",
-  "/Cargo.toml",
-  "/LICENSE",
-  "/README.md",
-  "/src/**",
-]
-keywords = ["rust", "starter", "template"]
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/veeso/rust-template"
+homepage = "https://github.com/veeso/dav-xml"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/veeso/dav-xml"
 rust-version = "1.98.0"
-description = "A reusable Rust project template with batteries-included development tooling."
 
-[lib]
-name = "rust_template"
-path = "src/lib.rs"
+[workspace.dependencies]
+bytes = "1"
+bytestring = "1"
+dav-xml = { path = "crates/dav-xml", version = "0.1.0" }
+http = "1"
+httpdate = "1"
+indexmap = "2"
+mime = "0.3"
+nonempty = "0.12"
+pretty_assertions = "1"
+quick-xml = "0.42"
+thiserror = "2"
+time = "0.3"
 
-[[bin]]
-name = "rust-template"
-path = "src/main.rs"
-
-[lints.rust]
+[workspace.lints.rust]
 ambiguous_negative_literals = "warn"
 missing_debug_implementations = "warn"
+missing_docs = "warn"
 redundant_imports = "warn"
 redundant_lifetimes = "warn"
 trivial_numeric_casts = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unused_lifetimes = "warn"
 
-[lints.clippy]
+[workspace.lints.clippy]
 cargo = { level = "warn", priority = -1 }
 complexity = { level = "warn", priority = -1 }
 correctness = { level = "warn", priority = -1 }

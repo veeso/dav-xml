@@ -1,0 +1,40 @@
+[package]
+name = "dav-xml"
+version.workspace = true
+authors.workspace = true
+categories = ["network-programming", "parser-implementations"]
+edition.workspace = true
+homepage.workspace = true
+include = ["/README.md", "/src/**"]
+keywords = ["webdav", "xml", "rfc4918", "dav"]
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+rust-version.workspace = true
+description = "WebDAV (RFC 4918) XML elements, properties and (de)serialization."
+
+[dependencies]
+bytes = { workspace = true }
+bytestring = { workspace = true }
+http = { workspace = true }
+httpdate = { workspace = true }
+indexmap = { workspace = true }
+mime = { workspace = true }
+nonempty = { workspace = true }
+quick-xml = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true, features = ["formatting", "parsing"] }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
+[lib]
+name = "dav_xml"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
