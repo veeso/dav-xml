@@ -45,6 +45,12 @@ impl TryFrom<&Value> for Remove {
 
 impl From<Remove> for Value {
     fn from(Remove(prop): Remove) -> Self {
+        let prop = prop
+            .names()
+            .fold(Prop::builder(), |builder, name| {
+                builder.raw(name.clone(), Value::Empty)
+            })
+            .build();
         let mut map = ValueMap::new();
         map.insert::<Prop>(prop.into());
         Value::Map(map)
@@ -59,13 +65,28 @@ mod tests {
     use crate::{FromXml, IntoXml};
 
     #[test]
-    fn parses_writes_and_round_trips() {
+    fn parses_writes_and_round_trips_empty_property_names() {
         let remove = Remove::from_xml(
-            br#"<D:remove xmlns:D="DAV:"><D:prop><D:x>1</D:x></D:prop></D:remove>"#.to_vec(),
+            br#"<D:remove xmlns:D="DAV:"><D:prop><D:x/></D:prop></D:remove>"#.to_vec(),
         )
         .unwrap();
         let output = remove.clone().into_xml().unwrap();
         assert_eq!(Remove::from_xml(output).unwrap(), remove);
+    }
+
+    #[test]
+    fn serializes_populated_prop_children_as_empty_names() {
+        let remove = Remove::from_xml(
+            br#"<D:remove xmlns:D="DAV:"><D:prop><D:x>1</D:x></D:prop></D:remove>"#.to_vec(),
+        )
+        .unwrap();
+        let output = remove.into_xml().unwrap();
+        let expected = Remove::from_xml(
+            br#"<D:remove xmlns:D="DAV:"><D:prop><D:x/></D:prop></D:remove>"#.to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(Remove::from_xml(output).unwrap(), expected);
     }
 
     #[test]
