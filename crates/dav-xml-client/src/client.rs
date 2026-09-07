@@ -1006,3 +1006,43 @@ impl<T: Transport> DavClient<T> {
         }
     }
 }
+
+#[cfg(feature = "ureq")]
+impl DavClient<ureq::Agent> {
+    /// A client over [`crate::transport::ureq::default_agent`], which
+    /// returns error statuses as responses and follows no redirects.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml_client::{Auth, DavClient};
+    ///
+    /// let client = DavClient::ureq(Auth::basic("alice", "secret"));
+    /// assert!(!client.transport().config().http_status_as_error());
+    /// ```
+    #[must_use]
+    pub fn ureq(auth: Auth) -> Self {
+        Self::new(crate::transport::ureq::default_agent(), auth)
+    }
+
+    /// A client over a caller-configured [`ureq::Agent`].
+    ///
+    /// Configure `agent` with `http_status_as_error(false)` (see
+    /// [`ureq::config::ConfigBuilder::http_status_as_error`]), or every
+    /// `4xx`/`5xx` response becomes a transport error instead of a value
+    /// this client can inspect.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml_client::transport::ureq::default_agent;
+    /// use dav_xml_client::{Auth, DavClient};
+    ///
+    /// let client = DavClient::ureq_with(default_agent(), Auth::basic("alice", "secret"));
+    /// assert!(!client.transport().config().http_status_as_error());
+    /// ```
+    #[must_use]
+    pub fn ureq_with(agent: ureq::Agent, auth: Auth) -> Self {
+        Self::new(agent, auth)
+    }
+}

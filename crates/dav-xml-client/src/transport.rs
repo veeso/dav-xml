@@ -17,7 +17,7 @@ mod mock;
 #[cfg(feature = "reqwest")]
 mod reqwest;
 #[cfg(feature = "ureq")]
-mod ureq;
+pub mod ureq;
 
 #[cfg(any(test, feature = "mock"))]
 pub use self::mock::MockTransport;
