@@ -17,4 +17,9 @@
 
 pub use dav_xml::DAV_NAMESPACE;
 
+pub mod auth;
+pub mod headers;
 pub mod transport;
+
+#[doc(inline)]
+pub use auth::Auth;
