@@ -144,6 +144,7 @@ mod tests {
 
     use super::*;
     use crate::FromXml;
+    use crate::elements::{LockScope, LockType};
 
     const APACHE: &str = r#"<D:prop xmlns:D="DAV:" xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
   <lp1:resourcetype><D:collection/></lp1:resourcetype>
@@ -189,6 +190,24 @@ mod tests {
             .unwrap();
         assert!(matches!(prop.displayname(), Some(None)));
         assert!(prop.getetag().is_none());
+    }
+
+    #[test]
+    fn typed_getters_read_populated_lock_properties() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:">
+  <D:lockdiscovery><D:activelock><D:lockscope><D:shared/></D:lockscope><D:locktype><D:write/></D:locktype><D:depth>0</D:depth><D:lockroot><D:href>/locked</D:href></D:lockroot></D:activelock></D:lockdiscovery>
+  <D:supportedlock><D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry></D:supportedlock>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+        let lock_discovery = prop.lockdiscovery().unwrap().unwrap().unwrap();
+        let supported_lock = prop.supportedlock().unwrap().unwrap().unwrap();
+
+        assert_eq!(lock_discovery.0.len(), 1);
+        assert_eq!(lock_discovery.0[0].lockroot.0.path(), "/locked");
+        assert!(supported_lock.supports(LockScope::Exclusive, LockType::Write));
     }
 
     #[test]
