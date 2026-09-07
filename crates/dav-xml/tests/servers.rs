@@ -2,7 +2,11 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-//! Bodies captured from real `WebDAV` servers.
+//! `WebDAV` interoperability fixtures.
+//!
+//! `apache-mod_dav-propfind.xml` comes from `remotefs-rs-webdav` 0.2.1's
+//! `src/parser.rs::test_should_parse_dir_content` fixture. The Nextcloud, IIS,
+//! and Apache LOCK fixtures are representative interoperability fixtures.
 
 use dav_xml::FromXml;
 use dav_xml::elements::{Multistatus, Prop, Response};
@@ -42,12 +46,10 @@ fn apache_mod_dav_listing() {
     let Response::Propstat { propstat, .. } = &ms.response[2] else {
         panic!()
     };
-    assert!(
-        propstat[0]
-            .prop
-            .names()
-            .any(|n| n.local_name == "executable")
-    );
+    assert!(propstat[0].prop.names().any(|n| {
+        n.local_name == "executable"
+            && n.namespace.as_deref() == Some("http://apache.org/dav/props/")
+    }));
 }
 
 #[test]
