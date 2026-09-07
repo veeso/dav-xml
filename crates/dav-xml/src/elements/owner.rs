@@ -20,7 +20,7 @@ use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 /// let owner = Owner::text("Jane");
 /// assert_eq!(owner.as_text(), Some("Jane"));
 /// ```
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Owner(pub Value);
 
 impl Owner {

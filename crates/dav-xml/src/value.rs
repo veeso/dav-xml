@@ -15,7 +15,7 @@ use crate::element::{Element, ElementExt, ElementName};
 /// [`serde_json::Value`](https://docs.rs/serde_json/latest/serde_json/enum.Value.html).
 /// Unlike when deserializing JSON, which has explicit arrays, we have to
 /// manually group multiple adjacent elements into an array-like structure.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum Value {
     /// The element is empty, e.g. `<foo />`
     #[default]
@@ -156,7 +156,7 @@ where
 type InnerValueMap = IndexMap<ElementName<ByteString>, Value>;
 
 /// A mapping from tag names to [`Value`]s.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ValueMap(pub(crate) InnerValueMap);
 
 impl ValueMap {

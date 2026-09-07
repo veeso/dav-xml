@@ -8,7 +8,18 @@ use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
 /// The `supportedlock` property
 /// ([RFC 4918 section 15.10](https://www.rfc-editor.org/rfc/rfc4918#section-15.10)).
-#[derive(Clone, Debug, Default, PartialEq)]
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::{LockScope, LockType};
+/// use dav_xml::properties::SupportedLock;
+/// use dav_xml::FromXml;
+///
+/// let locks = SupportedLock::from_xml(br#"<D:supportedlock xmlns:D="DAV:"><D:lockentry><D:lockscope><D:shared/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry></D:supportedlock>"#.to_vec()).unwrap();
+/// assert!(locks.supports(LockScope::Shared, LockType::Write));
+/// ```
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SupportedLock(pub Vec<LockEntry>);
 
 impl SupportedLock {
@@ -56,7 +67,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::FromXml;
+    use crate::{FromXml, IntoXml};
 
     const RFC_15_10: &str = r#"<D:supportedlock xmlns:D="DAV:">
   <D:lockentry><D:lockscope><D:exclusive/></D:lockscope><D:locktype><D:write/></D:locktype></D:lockentry>
@@ -75,5 +86,44 @@ mod tests {
     fn empty_supports_nothing() {
         let sl = SupportedLock::try_from(&Value::Empty).unwrap();
         assert!(!sl.supports(LockScope::Exclusive, LockType::Write));
+    }
+
+    #[test]
+    fn writes_empty_element() {
+        let xml = String::from_utf8(SupportedLock::default().into_xml().unwrap().to_vec()).unwrap();
+        assert!(xml.ends_with(r#"<D:supportedlock xmlns:D="DAV:"/>"#));
+    }
+
+    #[test]
+    fn round_trips_one_lock_entry() {
+        let supported_lock = SupportedLock(vec![LockEntry {
+            lockscope: LockScope::Exclusive,
+            locktype: LockType::Write,
+        }]);
+        let xml = supported_lock.clone().into_xml().unwrap();
+        assert_eq!(SupportedLock::from_xml(xml).unwrap(), supported_lock);
+    }
+
+    #[test]
+    fn round_trips_multiple_lock_entries() {
+        let supported_lock = SupportedLock(vec![
+            LockEntry {
+                lockscope: LockScope::Exclusive,
+                locktype: LockType::Write,
+            },
+            LockEntry {
+                lockscope: LockScope::Shared,
+                locktype: LockType::Write,
+            },
+        ]);
+        let xml = supported_lock.clone().into_xml().unwrap();
+        assert_eq!(SupportedLock::from_xml(xml).unwrap(), supported_lock);
+    }
+
+    #[test]
+    fn implements_eq() {
+        fn assert_eq<T: Eq>() {}
+
+        assert_eq::<SupportedLock>();
     }
 }

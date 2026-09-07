@@ -8,7 +8,17 @@ use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
 /// The `lockdiscovery` property
 /// ([RFC 4918 section 15.8](https://www.rfc-editor.org/rfc/rfc4918#section-15.8)).
-#[derive(Clone, Debug, Default, PartialEq)]
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::properties::LockDiscovery;
+/// use dav_xml::FromXml;
+///
+/// let locks = LockDiscovery::from_xml(br#"<D:lockdiscovery xmlns:D="DAV:"/>"#.to_vec()).unwrap();
+/// assert!(locks.0.is_empty());
+/// ```
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LockDiscovery(pub Vec<ActiveLock>);
 
 impl Element for LockDiscovery {
@@ -46,7 +56,20 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::FromXml;
+    use crate::elements::{Depth, Href, LockRoot, LockScope, LockType};
+    use crate::{FromXml, IntoXml};
+
+    fn active_lock(path: &str) -> ActiveLock {
+        ActiveLock {
+            lockscope: LockScope::Shared,
+            locktype: LockType::Write,
+            depth: Depth::Zero,
+            owner: None,
+            timeout: None,
+            locktoken: None,
+            lockroot: LockRoot::from(path.parse::<Href>().unwrap()),
+        }
+    }
 
     #[test]
     fn empty_means_no_locks() {
@@ -68,5 +91,32 @@ mod tests {
     fn empty_serializes_as_empty_element() {
         let value: Value = LockDiscovery(Vec::new()).into();
         assert_eq!(value, Value::Empty);
+    }
+
+    #[test]
+    fn writes_empty_element() {
+        let xml = String::from_utf8(LockDiscovery::default().into_xml().unwrap().to_vec()).unwrap();
+        assert!(xml.ends_with(r#"<D:lockdiscovery xmlns:D="DAV:"/>"#));
+    }
+
+    #[test]
+    fn round_trips_one_active_lock() {
+        let lock_discovery = LockDiscovery(vec![active_lock("/a")]);
+        let xml = lock_discovery.clone().into_xml().unwrap();
+        assert_eq!(LockDiscovery::from_xml(xml).unwrap(), lock_discovery);
+    }
+
+    #[test]
+    fn round_trips_multiple_active_locks() {
+        let lock_discovery = LockDiscovery(vec![active_lock("/a"), active_lock("/b")]);
+        let xml = lock_discovery.clone().into_xml().unwrap();
+        assert_eq!(LockDiscovery::from_xml(xml).unwrap(), lock_discovery);
+    }
+
+    #[test]
+    fn implements_eq() {
+        fn assert_eq<T: Eq>() {}
+
+        assert_eq::<LockDiscovery>();
     }
 }
