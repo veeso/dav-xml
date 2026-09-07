@@ -7,6 +7,16 @@ unit_element!(
     /// ([RFC 4918 section 14.30](https://www.rfc-editor.org/rfc/rfc4918#section-14.30)).
     ///
     /// Identifies the write lock type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::FromXml;
+    /// use dav_xml::elements::Write;
+    ///
+    /// let write = Write::from_xml(br#"<D:write xmlns:D="DAV:"/>"#.to_vec()).unwrap();
+    /// assert_eq!(write, Write);
+    /// ```
     Write,
     "write"
 );

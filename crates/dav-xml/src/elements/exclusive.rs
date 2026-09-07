@@ -7,6 +7,17 @@ unit_element!(
     /// ([RFC 4918 section 14.6](https://www.rfc-editor.org/rfc/rfc4918#section-14.6)).
     ///
     /// Marks a lock scope as exclusive.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::FromXml;
+    /// use dav_xml::elements::Exclusive;
+    ///
+    /// let exclusive =
+    ///     Exclusive::from_xml(br#"<D:exclusive xmlns:D="DAV:"/>"#.to_vec()).unwrap();
+    /// assert_eq!(exclusive, Exclusive);
+    /// ```
     Exclusive,
     "exclusive"
 );
