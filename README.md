@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/veeso/dav-xml/actions/workflows/ci.yml/badge.svg)](https://github.com/veeso/dav-xml/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
+[![Crates.io dav-xml](https://img.shields.io/crates/v/dav-xml.svg?logo=rust&label=dav-xml)](https://crates.io/crates/dav-xml)
+[![Crates.io dav-xml-client](https://img.shields.io/crates/v/dav-xml-client.svg?logo=rust&label=dav-xml-client)](https://crates.io/crates/dav-xml-client)
+[![Docs dav-xml](https://img.shields.io/docsrs/dav-xml?label=docs%20dav-xml)](https://docs.rs/dav-xml)
+[![Docs dav-xml-client](https://img.shields.io/docsrs/dav-xml-client?label=docs%20dav-xml-client)](https://docs.rs/dav-xml-client)
 
 Rust WebDAV toolkit ([RFC 4918](https://www.rfc-editor.org/rfc/rfc4918)):
 XML (de)serialization and a minimal HTTP client.
