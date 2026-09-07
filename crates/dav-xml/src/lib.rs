@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 #![doc = include_str!("../README.md")]
+#![doc = "The RFC 4918 coverage table above documents the supported XML elements, live properties, and pre- and postcondition codes."]
 
 mod element;
 #[macro_use]
