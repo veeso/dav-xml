@@ -510,18 +510,18 @@ mod tests {
     #[test]
     fn ignores_formatting_whitespace_around_property_children() {
         let prop = Prop::from_xml(
-            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
-  <Z:custom>
-    <Z:child/>
-  </Z:custom>
+            br#"<D:prop xmlns:D="DAV:">
+  <D:resourcetype>
+    <D:collection/>
+  </D:resourcetype>
 </D:prop>"#
                 .to_vec(),
         )
         .unwrap();
         let custom_name: ElementName<ByteString> = ElementName {
-            namespace: Some("urn:example".into()),
+            namespace: Some(DAV_NAMESPACE.into()),
             prefix: None,
-            local_name: "custom".into(),
+            local_name: "resourcetype".into(),
         };
 
         assert_eq!(
@@ -530,14 +530,46 @@ mod tests {
                 let mut map = ValueMap::new();
                 map.insert_raw(
                     ElementName::<ByteString> {
-                        namespace: Some("urn:example".into()),
+                        namespace: Some(DAV_NAMESPACE.into()),
                         prefix: None,
-                        local_name: "child".into(),
+                        local_name: "collection".into(),
                     },
                     Value::Empty,
                 );
                 map
             }))
+        );
+    }
+
+    #[test]
+    fn preserves_boundary_whitespace_in_custom_property_children() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom> <Z:a/> <Z:b/> </Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
+        );
+    }
+
+    #[test]
+    fn round_trips_map_custom_property_children() {
+        let prop = Prop::from_xml(
+            br#"<D:prop xmlns:D="DAV:" xmlns:Z="urn:example">
+  <Z:custom><Z:a/><Z:b/></Z:custom>
+</D:prop>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Prop::from_xml(prop.clone().into_xml().unwrap()).unwrap(),
+            prop
         );
     }
 
