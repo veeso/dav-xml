@@ -12,7 +12,7 @@ href_element!(
     /// use dav_xml::elements::{Href, LockRoot};
     /// use dav_xml::IntoXml;
     ///
-    /// let root = LockRoot::from(Href("https://example.org/locked".parse().unwrap()));
+    /// let root = LockRoot::from("https://example.org/locked".parse::<Href>().unwrap());
     /// let xml = root.into_xml().unwrap();
     /// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:lockroot"));
     /// ```
@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn parses_href() {
         let root = LockRoot::from_xml(XML.to_vec()).unwrap();
-        assert_eq!(root.0.0.scheme_str(), Some("urn"));
+        assert_eq!(root.0.scheme_str(), Some("urn"));
     }
 
     #[test]

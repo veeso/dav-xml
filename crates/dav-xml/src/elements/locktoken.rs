@@ -12,7 +12,7 @@ href_element!(
     /// use dav_xml::elements::{Href, LockToken};
     /// use dav_xml::IntoXml;
     ///
-    /// let token = LockToken::from(Href("https://example.org/token".parse().unwrap()));
+    /// let token = LockToken::from("https://example.org/token".parse::<Href>().unwrap());
     /// let xml = token.into_xml().unwrap();
     /// assert!(std::str::from_utf8(&xml).unwrap().contains("<D:locktoken"));
     /// ```
@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn parses_href() {
         let token = LockToken::from_xml(XML.to_vec()).unwrap();
-        assert_eq!(token.0.0.scheme_str(), Some("urn"));
+        assert_eq!(token.0.scheme_str(), Some("urn"));
     }
 
     #[test]

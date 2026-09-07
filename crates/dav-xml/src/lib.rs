@@ -52,7 +52,7 @@ pub const DAV_PREFIX: &str = "D";
 /// use dav_xml::elements::Href;
 ///
 /// let href = Href::from_xml(br#"<D:href xmlns:D="DAV:">/a</D:href>"#.to_vec()).unwrap();
-/// assert_eq!(href.0.path(), "/a");
+/// assert_eq!(href.path(), "/a");
 /// ```
 pub trait FromXml: Sized {
     /// Parse `xml` into `Self`.
@@ -90,7 +90,7 @@ where
 /// use dav_xml::IntoXml;
 /// use dav_xml::elements::Href;
 ///
-/// let xml = Href("/a".parse().unwrap()).into_xml().unwrap();
+/// let xml = "/a".parse::<Href>().unwrap().into_xml().unwrap();
 /// assert!(std::str::from_utf8(&xml)
 ///     .unwrap()
 ///     .contains("<D:href xmlns:D=\"DAV:\">/a</D:href>"));

@@ -119,7 +119,7 @@ mod tests {
         let multistatus = Multistatus::from_xml(THREE.as_bytes().to_vec()).unwrap();
         let failing: Vec<_> = multistatus
             .failures()
-            .map(|(href, status)| (href.0.path().to_owned(), status.code.as_u16()))
+            .map(|(href, status)| (href.path().to_owned(), status.code.as_u16()))
             .collect();
         assert_eq!(failing, [("/b".to_owned(), 404)]);
     }

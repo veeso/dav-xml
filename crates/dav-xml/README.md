@@ -15,7 +15,7 @@ for response in &multistatus.response {
     if let Response::Propstat { href, propstat, .. } = response {
         for propstat in propstat {
             if let Some(Some(Ok(size))) = propstat.prop.getcontentlength() {
-                println!("{href} is {size} bytes", href = href.0, size = size.0);
+                println!("{href} is {size} bytes", href = href, size = size.0);
             }
         }
     }

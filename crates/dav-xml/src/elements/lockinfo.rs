@@ -93,7 +93,6 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::elements::Href;
     use crate::{FromXml, IntoXml};
 
     const RFC_9_10_7: &str = r#"<?xml version="1.0" encoding="utf-8" ?>
@@ -122,8 +121,7 @@ mod tests {
 
     #[test]
     fn writes_request_body() {
-        let info =
-            LockInfo::exclusive_write().with_owner(Owner::href(Href("/me".parse().unwrap())));
+        let info = LockInfo::exclusive_write().with_owner(Owner::href("/me".parse().unwrap()));
         let xml = info.clone().into_xml().unwrap();
         let text = std::str::from_utf8(&xml).unwrap();
         assert!(text.contains("<D:lockinfo xmlns:D=\"DAV:\">"), "{text}");

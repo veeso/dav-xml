@@ -85,7 +85,7 @@ mod tests {
     fn parses_href_owner() {
         let xml = br#"<D:owner xmlns:D="DAV:"><D:href>http://example.org/~ejw/contact.html</D:href></D:owner>"#;
         let owner = Owner::from_xml(xml.to_vec()).unwrap();
-        assert_eq!(owner.as_href().unwrap().0.host(), Some("example.org"));
+        assert_eq!(owner.as_href().unwrap().host(), Some("example.org"));
     }
 
     #[test]
@@ -103,10 +103,7 @@ mod tests {
 
     #[test]
     fn round_trips_constructors() {
-        for owner in [
-            Owner::text("Jane"),
-            Owner::href(Href("/u".parse().unwrap())),
-        ] {
+        for owner in [Owner::text("Jane"), Owner::href("/u".parse().unwrap())] {
             let xml = owner.clone().into_xml().unwrap();
             assert_eq!(Owner::from_xml(xml).unwrap(), owner);
         }
