@@ -41,8 +41,11 @@ pub(crate) struct RequestContext<'a> {
     /// a specific builder overrides it (`refresh_lock` merges into it
     /// instead).
     pub if_header: Option<&'a If>,
-    /// Additional headers applied last, so they can override the ones this
-    /// module sets.
+    /// Additional headers applied after `Authorization` and `If`, replacing
+    /// either one under the same name rather than duplicating it. Headers a
+    /// specific verb builder adds after calling [`Self::base`] (`Depth`,
+    /// `Destination`, `Timeout`, and so on) are set later still and are not
+    /// affected by `extra`.
     pub extra: &'a http::HeaderMap,
 }
 
@@ -52,7 +55,9 @@ pub(crate) struct RequestContext<'a> {
 )]
 impl RequestContext<'_> {
     /// Starts a request for `method` and `url`, applying auth, the `If`
-    /// header, and the extra headers.
+    /// header, and the extra headers. An extra header replaces the
+    /// `Authorization` or `If` header set here under the same name, rather
+    /// than duplicating it.
     ///
     /// # Errors
     ///
@@ -67,6 +72,16 @@ impl RequestContext<'_> {
         }
         if let Some(cond) = self.if_header.filter(|c| !c.is_empty()) {
             builder = builder.header(headers::IF, http::HeaderValue::from_str(&cond.to_string())?);
+        }
+        // `HeaderMap::header` appends rather than replaces, so drop any
+        // value this function already set for a name `extra` also carries
+        // before adding `extra`'s own values; otherwise the caller's
+        // override would be a second, unread value (`HeaderMap::get`
+        // returns only the first) rather than a real override.
+        if let Some(built) = builder.headers_mut() {
+            for name in self.extra.keys() {
+                built.remove(name);
+            }
         }
         for (name, value) in self.extra {
             builder = builder.header(name, value);
@@ -351,6 +366,22 @@ mod tests {
         assert_eq!(header(&request, "authorization"), Some("Basic YTpi"));
         assert_eq!(header(&request, "if"), Some("(<t>)"));
         assert_eq!(header(&request, "x-custom"), Some("1"));
+    }
+
+    #[test]
+    fn extra_headers_override_authorization_and_if() {
+        let auth = Auth::basic("a", "b");
+        let cond = If::untagged("t");
+        let mut extra = http::HeaderMap::new();
+        extra.insert("authorization", "Bearer overridden".parse().unwrap());
+        extra.insert("if", "(<override>)".parse().unwrap());
+        let request = ctx(&auth, Some(&cond), &extra).get("http://h/p").unwrap();
+        // A single value per name: the extra header replaced the one `base`
+        // set, rather than appending a second, unread value.
+        assert_eq!(request.headers().get_all("authorization").iter().count(), 1);
+        assert_eq!(request.headers().get_all("if").iter().count(), 1);
+        assert_eq!(header(&request, "authorization"), Some("Bearer overridden"));
+        assert_eq!(header(&request, "if"), Some("(<override>)"));
     }
 
     #[test]
