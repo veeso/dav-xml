@@ -18,6 +18,7 @@ dav-xml = { path = "crates/dav-xml", version = "0.1.0" }
 http = "1"
 httpdate = "1"
 indexmap = "2"
+iri-string = "0.7"
 mime = "0.3"
 nonempty = "0.12"
 pretty_assertions = "1"

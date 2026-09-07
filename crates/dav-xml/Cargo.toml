@@ -19,6 +19,7 @@ bytestring = { workspace = true }
 http = { workspace = true }
 httpdate = { workspace = true }
 indexmap = { workspace = true }
+iri-string = { workspace = true }
 mime = { workspace = true }
 nonempty = { workspace = true }
 quick-xml = { workspace = true }
