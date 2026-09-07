@@ -48,13 +48,23 @@ swap in a weaker command.
 
 ## Architecture
 
-This is a template repository, not an application. The Rust source is a
-deliberate two-line placeholder; the substance lives in the tooling layers,
-which are designed to stay identical across every project generated from it.
+This workspace separates the reusable WebDAV XML model from the HTTP client
+that will consume it.
 
-- **Package shape.** One Cargo package with both a `[lib]` (`rust_template`,
-  `src/lib.rs`) and a `[[bin]]` (`rust-template`, `src/main.rs`). The binary
-  calls the library. Downstream projects delete one target; keep both here.
+- **Package shape.** `crates/dav-xml` is a library-only crate exposing the
+  generic XML value tree, RFC 4918 elements, and properties. The
+  `crates/dav-xml-client` library is currently a documented placeholder and
+  will be implemented by the client plan.
+- **XML model.** `dav-xml` parses XML into an untyped `Value` tree. Typed
+  elements implement `Element` and conversions to and from `Value`, which
+  provide the `FromXml` and `IntoXml` APIs. Namespaced properties remain
+  extensible through the `Prop` map.
+- **Migrated source.** The XML implementation derives from the
+  `webdav-xml` crate by d-k-bo. Preserve d-k-bo SPDX copyright headers on those
+  files and add the project header to new files. The project is licensed under
+  `MIT OR Apache-2.0`.
+- **Workspace structure.** Shared package metadata, dependencies, and lints
+  live in the root `Cargo.toml`; package manifests are under `crates/*`.
 - **Command layer.** `Justfile` is a thin importer. Each recipe group lives in
   its own file under `just/` (`build`, `test`, `code_check`, `changelog`,
   `publish`) and carries a `[group(...)]` attribute so `just --list` stays
@@ -83,8 +93,8 @@ which are designed to stay identical across every project generated from it.
   crates.io accepts the package.
 - **Supply-chain policy.** `deny.toml` is strict: license allowlist,
   `yanked = "deny"`, `unmaintained = "all"`, wildcard versions denied, and
-  crates.io as the only allowed source. There are currently no third-party
-  dependencies; adding one must satisfy this policy.
+  crates.io as the only allowed source. Workspace dependencies must satisfy
+  this policy.
 
 ## Conventions
 
@@ -97,6 +107,8 @@ which are designed to stay identical across every project generated from it.
 - Prefer `#[expect]` with a reason over `#[allow]`.
 - Keep `Cargo.toml` dependency and feature entries alphabetically sorted, with
   bare minimal versions.
+- `just publish` publishes the workspace in dependency order;
+  `just publish_crate <name>` publishes one package.
 - Conventional Commits, imperative and lower-case. No agent attribution,
   session links, or agent `Co-Authored-By` lines.
 - Do not stage planning state. `docs/superpowers/`, `.superpowers/`, and

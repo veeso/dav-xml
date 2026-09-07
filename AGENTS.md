@@ -4,9 +4,10 @@ Guidance for coding agents working in this repository.
 
 ## Project context
 
-This repository is a reusable Rust project template. It starts as one Cargo
-package with both library and binary targets and no third-party Rust
-dependencies.
+This repository is a Rust workspace containing the `dav-xml` XML library and
+the `dav-xml-client` placeholder library. `dav-xml` derives from the
+`webdav-xml` crate by d-k-bo; migrated files retain their upstream SPDX
+copyright header alongside the project copyright header.
 
 The toolchain is pinned to Rust 1.98.0 with edition 2024. Keep
 `rust-toolchain.toml` and `package.rust-version` in `Cargo.toml` synchronized.
@@ -27,10 +28,14 @@ The toolchain is pinned to Rust 1.98.0 with edition 2024. Keep
 
 ## Source layout
 
-- `src/lib.rs` contains the public library API and its focused unit tests.
-- `src/main.rs` is the binary entry point and may call the library API.
-- Keep both targets unless the requested project is explicitly library-only or
-  binary-only.
+- `crates/dav-xml/src/lib.rs` contains the public XML API and crate docs.
+- `crates/dav-xml/src/element.rs`, `value.rs`, `read.rs`, and `write.rs`
+  contain the generic XML representation and conversion machinery.
+- `crates/dav-xml/src/elements.rs` and `elements/` contain RFC 4918 elements.
+- `crates/dav-xml/src/properties.rs` and `properties/` contain RFC 4918
+  properties.
+- `crates/dav-xml-client/src/lib.rs` is a library-only placeholder for the
+  future client implementation.
 - Use `module_name.rs`; never introduce `mod.rs`.
 
 ## Rust conventions
@@ -43,7 +48,9 @@ The toolchain is pinned to Rust 1.98.0 with edition 2024. Keep
 - Use named format placeholders instead of positional `{}` arguments.
 - Prefer `#[expect]` with a reason over `#[allow]` for local lint overrides.
 - Keep dependency entries and feature definitions alphabetically sorted.
-- Use bare, minimal dependency versions in `Cargo.toml`.
+- Use bare, minimal dependency versions in the workspace `Cargo.toml`.
+- New Rust files must use the project SPDX header. Keep d-k-bo's SPDX header
+  on migrated files.
 
 ## Command interface
 
@@ -70,7 +77,7 @@ just setup_githooks
 
 `just check` is the required local quality gate. It runs formatting checks,
 Clippy with warnings denied, rustdoc with warnings denied, cargo-deny, and the
-test suite.
+workspace test suite.
 
 When invoking compilation or test commands from the CLI, never request
 parallelism greater than eight. This is an invocation constraint; do not encode
@@ -121,6 +128,8 @@ passed or silently replace the repository command with a weaker check.
 - Inspect the diff before staging or committing changes.
 - Generate release notes with `just changelog_preview <version>` and
   `just changelog <version>`.
+- `just publish` publishes workspace crates in dependency order; use
+  `just publish_crate <name>` for one crate.
 - Verify packages locally with `just publish "--dry-run --allow-dirty"`.
 - Live publication uses crates.io trusted publishing through
   `.github/workflows/publish.yml`.
