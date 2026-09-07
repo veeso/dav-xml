@@ -60,7 +60,17 @@ mod tests {
 use crate::elements::{Exclusive, Shared};
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
-/// The `lockscope` XML element from RFC 4918 section 14.13.
+/// The `lockscope` XML element ([RFC 4918 section 14.13](https://www.rfc-editor.org/rfc/rfc4918#section-14.13)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::LockScope;
+/// use dav_xml::FromXml;
+///
+/// let xml = br#"<D:lockscope xmlns:D="DAV:"><D:exclusive/></D:lockscope>"#;
+/// assert_eq!(LockScope::from_xml(xml.to_vec()).unwrap(), LockScope::Exclusive);
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum LockScope {
     /// Only one principal may hold the lock.

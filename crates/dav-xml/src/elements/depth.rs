@@ -55,7 +55,17 @@ use std::str::FromStr;
 
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
 
-/// The depth requested for a `WebDAV` operation.
+/// The depth requested for a `WebDAV` operation ([RFC 4918 section 10.2](https://www.rfc-editor.org/rfc/rfc4918#section-10.2)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::Depth;
+/// use std::str::FromStr;
+///
+/// assert_eq!(Depth::from_str("infinity").unwrap(), Depth::Infinity);
+/// assert_eq!(Depth::One.to_string(), "1");
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Depth {
     /// The resource only.
@@ -114,6 +124,6 @@ impl From<Depth> for Value {
 }
 
 /// A `depth` value other than `0`, `1`, or `infinity`.
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[error("invalid depth: {0}")]
 pub struct InvalidDepth(String);

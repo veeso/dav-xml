@@ -31,6 +31,18 @@ mod tests {
     }
 
     #[test]
+    fn rejects_self_closing_locktype_as_missing_write() {
+        let error = LockType::from_xml(br#"<D:locktype xmlns:D="DAV:"/>"#.to_vec()).unwrap_err();
+        assert!(matches!(
+            error,
+            Error::MissingElement {
+                parent: "locktype",
+                element: "write"
+            }
+        ));
+    }
+
+    #[test]
     fn round_trips() {
         let xml = LockType::Write.into_xml().unwrap();
         assert_eq!(LockType::from_xml(xml).unwrap(), LockType::Write);
@@ -40,7 +52,17 @@ mod tests {
 use crate::elements::Write;
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
-/// The `locktype` XML element from RFC 4918 section 14.14.
+/// The `locktype` XML element ([RFC 4918 section 14.15](https://www.rfc-editor.org/rfc/rfc4918#section-14.15)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::LockType;
+/// use dav_xml::FromXml;
+///
+/// let xml = br#"<D:locktype xmlns:D="DAV:"><D:write/></D:locktype>"#;
+/// assert_eq!(LockType::from_xml(xml.to_vec()).unwrap(), LockType::Write);
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum LockType {
     /// The lock applies to write operations.
@@ -57,6 +79,12 @@ impl TryFrom<&Value> for LockType {
     type Error = Error;
 
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        if matches!(value, Value::Empty) {
+            return Err(Error::MissingElement {
+                parent: Self::LOCAL_NAME,
+                element: Write::LOCAL_NAME,
+            });
+        }
         let map = value.as_map_of::<Self>()?;
         map.get_required::<Self, Write>()?;
         Ok(Self::Write)

@@ -27,6 +27,18 @@ mod tests {
     }
 
     #[test]
+    fn enforces_rfc_seconds_limit() {
+        let maximum = u64::from(u32::MAX);
+        assert_eq!(
+            format!("Second-{maximum}").parse::<Timeout>().unwrap(),
+            Timeout::Seconds(maximum)
+        );
+        format!("Second-{}", maximum + 1)
+            .parse::<Timeout>()
+            .unwrap_err();
+    }
+
+    #[test]
     fn displays() {
         assert_eq!(Timeout::Seconds(10).to_string(), "Second-10");
         assert_eq!(Timeout::Infinite.to_string(), "Infinite");
@@ -37,6 +49,18 @@ mod tests {
         assert_eq!(
             Timeout::from_duration(Duration::from_millis(1500)),
             Timeout::Seconds(1)
+        );
+        assert_eq!(
+            Timeout::from_duration(Duration::from_secs(u64::from(u32::MAX) + 1)),
+            Timeout::Seconds(u64::from(u32::MAX))
+        );
+    }
+
+    #[test]
+    fn displays_only_rfc_valid_seconds() {
+        assert_eq!(
+            Timeout::Seconds(u64::from(u32::MAX) + 1).to_string(),
+            format!("Second-{}", u64::from(u32::MAX))
         );
     }
 
@@ -53,7 +77,17 @@ use std::time::Duration;
 
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
 
-/// A `WebDAV` lock timeout.
+/// A `WebDAV` lock timeout ([RFC 4918 section 14.29](https://www.rfc-editor.org/rfc/rfc4918#section-14.29)).
+///
+/// # Examples
+///
+/// ```
+/// use dav_xml::elements::Timeout;
+/// use std::str::FromStr;
+///
+/// assert_eq!(Timeout::from_str("Second-60").unwrap(), Timeout::Seconds(60));
+/// assert_eq!(Timeout::Infinite.to_string(), "Infinite");
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Timeout {
     /// The lock never expires on its own.
@@ -63,10 +97,17 @@ pub enum Timeout {
 }
 
 impl Timeout {
+    const MAX_SECONDS: u64 = u32::MAX as u64;
+
     /// Creates a timeout rounded down to whole seconds.
     #[must_use]
     pub const fn from_duration(duration: Duration) -> Self {
-        Self::Seconds(duration.as_secs())
+        let seconds = duration.as_secs();
+        Self::Seconds(if seconds > Self::MAX_SECONDS {
+            Self::MAX_SECONDS
+        } else {
+            seconds
+        })
     }
 }
 
@@ -90,10 +131,13 @@ impl FromStr for Timeout {
         if !prefix.eq_ignore_ascii_case("Second") {
             return Err(InvalidTimeout(s.to_owned()));
         }
-        seconds
-            .parse()
-            .map(Self::Seconds)
-            .map_err(|error| InvalidTimeout(format!("{s}: {error}")))
+        let seconds = seconds
+            .parse::<u64>()
+            .map_err(|error| InvalidTimeout(format!("{s}: {error}")))?;
+        if seconds > Self::MAX_SECONDS {
+            return Err(InvalidTimeout(s.to_owned()));
+        }
+        Ok(Self::Seconds(seconds))
     }
 }
 
@@ -101,7 +145,9 @@ impl Display for Timeout {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Infinite => f.write_str("Infinite"),
-            Self::Seconds(seconds) => write!(f, "Second-{seconds}"),
+            Self::Seconds(seconds) => {
+                write!(f, "Second-{}", (*seconds).min(Self::MAX_SECONDS))
+            }
         }
     }
 }
@@ -124,6 +170,6 @@ impl From<Timeout> for Value {
 }
 
 /// A timeout value that cannot be parsed according to RFC 4918.
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[error("invalid timeout: {0}")]
 pub struct InvalidTimeout(String);
