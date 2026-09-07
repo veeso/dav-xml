@@ -31,6 +31,10 @@ pub(crate) fn write_xml<E: Element>(writer: impl std::io::Write, value: Value) -
 }
 
 fn validate_value(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
+    if is_owner_name(name) {
+        return Ok(());
+    }
+
     match value {
         Value::List(list) => list.iter().try_for_each(|item| validate_value(name, item)),
         Value::Text(_) | Value::Empty => validate_error(name, value),
@@ -549,6 +553,32 @@ mod tests {
                 expected: "child elements",
             }
         ));
+    }
+
+    #[test]
+    fn preserves_opaque_dav_error_content_inside_owner() {
+        let mut map = ValueMap::new();
+        map.insert_raw(
+            name(DAV_NAMESPACE, DAV_PREFIX, "owner"),
+            Value::Mixed(vec![
+                ContentItem::Text("\n  ".into()),
+                ContentItem::Element {
+                    name: name(DAV_NAMESPACE, DAV_PREFIX, DavError::LOCAL_NAME),
+                    value: Value::Mixed(vec![
+                        ContentItem::Text("\n    ".into()),
+                        ContentItem::Element {
+                            name: name(DAV_NAMESPACE, DAV_PREFIX, "propfind-finite-depth"),
+                            value: Value::Empty,
+                        },
+                        ContentItem::Text("\n  ".into()),
+                    ]),
+                },
+                ContentItem::Text("\n".into()),
+            ]),
+        );
+
+        let mut out = Vec::new();
+        write_xml::<Root>(&mut out, Value::Map(map)).unwrap();
     }
 
     #[test]

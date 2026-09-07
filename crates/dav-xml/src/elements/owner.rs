@@ -275,6 +275,33 @@ mod tests {
     }
 
     #[test]
+    fn preserves_many_adjacent_entity_chunks() {
+        let entities = "&amp;".repeat(4096);
+        let xml = format!(r#"<D:owner xmlns:D="DAV:">{entities}</D:owner>"#);
+        let owner = Owner::from_xml(xml.into_bytes()).unwrap();
+
+        assert_eq!(owner, Owner::text("&".repeat(4096)));
+    }
+
+    #[test]
+    fn round_trips_formatted_dav_error_inside_owner() {
+        let owner = Owner::from_xml(
+            br#"<D:owner xmlns:D="DAV:">
+  <D:error>
+    <D:propfind-finite-depth/>
+  </D:error>
+</D:owner>"#
+                .to_vec(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            Owner::from_xml(owner.clone().into_xml().unwrap()).unwrap(),
+            owner
+        );
+    }
+
+    #[test]
     fn round_trips_mixed_owner_with_foreign_namespace() {
         let owner = Owner(Value::Mixed(vec![
             ContentItem::Text("before".into()),

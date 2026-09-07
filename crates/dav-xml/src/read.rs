@@ -17,8 +17,36 @@ use crate::{Error, Result, Value};
 pub(crate) fn read_xml(xml: impl Into<bytes::Bytes>) -> Result<Value> {
     let xml = xml.into();
     let mut reader = XmlReader::new(std::str::from_utf8(&xml)?);
-    reader.read_into_value(&xml, false)
+    reader.read_into_value(&xml, ReadMode::Structured)
 }
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ReadMode {
+    Structured,
+    Prop,
+    Property,
+    Mixed,
+}
+
+#[derive(Default)]
+struct TextRun(Option<String>);
+
+impl TextRun {
+    fn push(&mut self, text: &str) {
+        self.0.get_or_insert_default().push_str(text);
+    }
+
+    fn take(&mut self) -> Option<ByteString> {
+        self.0.take().map(Into::into)
+    }
+
+    fn flush(&mut self, content: &mut Vec<ContentItem>) {
+        if let Some(text) = self.take() {
+            content.push(ContentItem::Text(text));
+        }
+    }
+}
+
 struct XmlReader<'x> {
     reader: quick_xml::NsReader<&'x [u8]>,
     last: Option<quick_xml::events::Event<'x>>,
@@ -45,42 +73,43 @@ impl<'x> XmlReader<'x> {
         Ok((resolve_result, event))
     }
 
-    fn read_into_value(&mut self, xml: &bytes::Bytes, preserve_mixed: bool) -> Result<Value> {
+    fn read_into_value(&mut self, xml: &bytes::Bytes, mode: ReadMode) -> Result<Value> {
         let mut map = ValueMap::new();
         let mut content = Vec::new();
+        let mut pending_text = TextRun::default();
 
         loop {
             let (resolve_result, event) = self.read_resolved_event()?;
             match event {
                 Event::Text(text) => {
-                    if !preserve_mixed && text.chars().all(char::is_whitespace) {
+                    if matches!(mode, ReadMode::Structured | ReadMode::Prop)
+                        && text.chars().all(char::is_whitespace)
+                    {
                         continue;
                     }
 
-                    if preserve_mixed {
-                        let text = unescape(&text).map_err(quick_xml::Error::from)?;
-                        let text: ByteString = xml.maybe_slice_ref(text.as_bytes()).try_into()?;
-                        push_mixed_text(&mut content, text);
+                    let text = unescape(&text).map_err(quick_xml::Error::from)?;
+                    if matches!(mode, ReadMode::Property | ReadMode::Mixed) {
+                        pending_text.push(&text);
                         continue;
                     }
 
-                    let head = unescape(&text).map_err(quick_xml::Error::from)?;
-                    let head: ByteString = xml.maybe_slice_ref(head.as_bytes()).try_into()?;
+                    let head: ByteString = xml.maybe_slice_ref(text.as_bytes()).try_into()?;
                     drop(text);
 
                     return Ok(Value::Text(self.read_trailing_text(head)?));
                 }
                 Event::Start(start) => {
+                    pending_text.flush(&mut content);
                     validate_namespace_declarations(xml, &start)?;
                     let key = key(xml, &resolve_result, &start)?;
                     let start_name = xml.maybe_slice_ref(start.name().as_ref().as_bytes());
                     drop(resolve_result);
                     drop(start);
 
-                    let child_value =
-                        self.read_into_value(xml, preserve_mixed || is_owner_name(&key))?;
+                    let child_value = self.read_into_value(xml, child_mode(mode, &key))?;
 
-                    if preserve_mixed {
+                    if matches!(mode, ReadMode::Property | ReadMode::Mixed) {
                         content.push(ContentItem::Element {
                             name: key,
                             value: child_value,
@@ -97,9 +126,10 @@ impl<'x> XmlReader<'x> {
                     }
                 }
                 Event::Empty(tag) => {
+                    pending_text.flush(&mut content);
                     validate_namespace_declarations(xml, &tag)?;
                     let key = key(xml, &resolve_result, &tag)?;
-                    if preserve_mixed {
+                    if matches!(mode, ReadMode::Property | ReadMode::Mixed) {
                         content.push(ContentItem::Element {
                             name: key,
                             value: Value::Empty,
@@ -114,8 +144,8 @@ impl<'x> XmlReader<'x> {
                     let head: ByteString = cdata.as_ref().into();
                     drop(cdata);
 
-                    if preserve_mixed {
-                        push_mixed_text(&mut content, head);
+                    if matches!(mode, ReadMode::Property | ReadMode::Mixed) {
+                        pending_text.push(&head);
                         continue;
                     }
 
@@ -130,8 +160,8 @@ impl<'x> XmlReader<'x> {
                     };
                     drop(reference);
 
-                    if preserve_mixed {
-                        push_mixed_text(&mut content, head);
+                    if matches!(mode, ReadMode::Property | ReadMode::Mixed) {
+                        pending_text.push(&head);
                         continue;
                     }
 
@@ -140,10 +170,12 @@ impl<'x> XmlReader<'x> {
             }
         }
 
-        Ok(if preserve_mixed {
-            mixed_value(content)
-        } else {
-            Value::Map(map)
+        pending_text.flush(&mut content);
+
+        Ok(match mode {
+            ReadMode::Mixed => mixed_value(content),
+            ReadMode::Property => property_value(content),
+            ReadMode::Structured | ReadMode::Prop => Value::Map(map),
         })
     }
 
@@ -241,13 +273,67 @@ fn is_owner_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(crate::DAV_NAMESPACE) && name.local_name == "owner"
 }
 
-fn push_mixed_text(content: &mut Vec<ContentItem>, text: ByteString) {
-    if let Some(ContentItem::Text(previous)) = content.last_mut() {
-        let mut merged = previous.to_string();
-        merged.push_str(&text);
-        *previous = merged.into();
-    } else {
-        content.push(ContentItem::Text(text));
+fn is_prop_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(crate::DAV_NAMESPACE) && name.local_name == "prop"
+}
+
+fn child_mode(mode: ReadMode, name: &ElementName<ByteString>) -> ReadMode {
+    match mode {
+        ReadMode::Mixed => ReadMode::Mixed,
+        ReadMode::Prop => {
+            if is_owner_name(name) {
+                ReadMode::Mixed
+            } else {
+                ReadMode::Property
+            }
+        }
+        ReadMode::Property => {
+            if is_owner_name(name) {
+                ReadMode::Mixed
+            } else {
+                ReadMode::Structured
+            }
+        }
+        ReadMode::Structured => {
+            if is_owner_name(name) {
+                ReadMode::Mixed
+            } else if is_prop_name(name) {
+                ReadMode::Prop
+            } else {
+                ReadMode::Structured
+            }
+        }
+    }
+}
+
+fn property_value(items: Vec<ContentItem>) -> Value {
+    let has_element = items
+        .iter()
+        .any(|item| matches!(item, ContentItem::Element { .. }));
+    let first_significant_text = items.iter().position(|item| {
+        matches!(item, ContentItem::Text(text) if text.chars().any(|character| !character.is_whitespace()))
+    });
+
+    match (has_element, first_significant_text) {
+        (false, None) => Value::Map(ValueMap::new()),
+        (false, Some(index)) => Value::Text(
+            items
+                .into_iter()
+                .skip(index)
+                .filter_map(|item| match item {
+                    ContentItem::Text(text) => Some(text.to_string()),
+                    ContentItem::Element { .. } => None,
+                })
+                .collect::<String>()
+                .into(),
+        ),
+        (true, None) => mixed_value(
+            items
+                .into_iter()
+                .filter(|item| matches!(item, ContentItem::Element { .. }))
+                .collect(),
+        ),
+        (true, Some(_)) => Value::Mixed(items),
     }
 }
 
@@ -403,5 +489,16 @@ mod tests {
             map.as_ref().get(&key(None, "a")),
             Some(&Value::Text("hi".into()))
         );
+    }
+
+    #[test]
+    fn accumulates_adjacent_text_chunks_in_one_pending_run() {
+        let mut run = TextRun::default();
+        for _ in 0..4096 {
+            run.push("&");
+        }
+
+        assert_eq!(run.take(), Some("&".repeat(4096).into()));
+        assert_eq!(run.take(), None);
     }
 }
