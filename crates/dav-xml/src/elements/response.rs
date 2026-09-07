@@ -4,7 +4,7 @@
 
 use nonempty::NonEmpty;
 
-use crate::elements::{Href, Propstat, ResponseDescription, Status};
+use crate::elements::{DavError, Href, Location, Propstat, ResponseDescription, Status};
 use crate::utils::NonEmptyExt;
 use crate::value::{ValueMap, list_value};
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
@@ -18,10 +18,12 @@ pub enum Response {
         href: Href,
         /// Status values for groups of properties.
         propstat: NonEmpty<Propstat>,
-        // error: Option<Error>,
+        /// An optional error describing the response failure.
+        error: Option<DavError>,
         /// An optional human-readable description.
         responsedescription: Option<ResponseDescription>,
-        // location: Option<Location>,
+        /// An optional alternative location for the resource.
+        location: Option<Location>,
     },
     /// A response containing one status for one or more resource URIs.
     Status {
@@ -29,10 +31,12 @@ pub enum Response {
         href: NonEmpty<Href>,
         /// The resource status.
         status: Status,
-        // error: Option<Error>,
+        /// An optional error describing the response failure.
+        error: Option<DavError>,
         /// An optional human-readable description.
         responsedescription: Option<ResponseDescription>,
-        // location: Option<Location>,
+        /// An optional alternative location for the resource.
+        location: Option<Location>,
     },
 }
 
@@ -40,6 +44,25 @@ impl Element for Response {
     const NAMESPACE: &'static str = DAV_NAMESPACE;
     const PREFIX: &'static str = DAV_PREFIX;
     const LOCAL_NAME: &'static str = "response";
+}
+
+impl Response {
+    /// The response's primary resource URI.
+    #[must_use]
+    pub fn href(&self) -> &Href {
+        match self {
+            Self::Propstat { href, .. } => href,
+            Self::Status { href, .. } => href.first(),
+        }
+    }
+
+    /// The error describing the response failure, if present.
+    #[must_use]
+    pub fn error(&self) -> Option<&DavError> {
+        match self {
+            Self::Propstat { error, .. } | Self::Status { error, .. } => error.as_ref(),
+        }
+    }
 }
 
 impl TryFrom<&Value> for Response {
@@ -52,7 +75,9 @@ impl TryFrom<&Value> for Response {
             Some(propstat) => Ok(Self::Propstat {
                 href: map.get_required::<Self, Href>()?,
                 propstat,
+                error: map.get().transpose()?,
                 responsedescription: map.get().transpose()?,
+                location: map.get().transpose()?,
             }),
             None => Ok(Self::Status {
                 href: NonEmpty::try_collect(map.iter_all::<Href>())?.ok_or(
@@ -62,7 +87,9 @@ impl TryFrom<&Value> for Response {
                     },
                 )?,
                 status: map.get_required::<Self, Status>()?,
+                error: map.get().transpose()?,
                 responsedescription: map.get().transpose()?,
+                location: map.get().transpose()?,
             }),
         }
     }
@@ -76,23 +103,39 @@ impl From<Response> for Value {
             Response::Propstat {
                 href,
                 propstat,
+                error,
                 responsedescription,
+                location,
             } => {
                 map.insert::<Href>(href.into());
                 map.insert::<Propstat>(list_value(propstat.into_iter().collect()));
+                if let Some(error) = error {
+                    map.insert::<DavError>(error.into());
+                }
                 if let Some(responsedescription) = responsedescription {
                     map.insert::<ResponseDescription>(responsedescription.into());
+                }
+                if let Some(location) = location {
+                    map.insert::<Location>(location.into());
                 }
             }
             Response::Status {
                 href,
                 status,
+                error,
                 responsedescription,
+                location,
             } => {
                 map.insert::<Href>(list_value(href.into_iter().collect()));
                 map.insert::<Status>(status.into());
+                if let Some(error) = error {
+                    map.insert::<DavError>(error.into());
+                }
                 if let Some(responsedescription) = responsedescription {
                     map.insert::<ResponseDescription>(responsedescription.into());
+                }
+                if let Some(location) = location {
+                    map.insert::<Location>(location.into());
                 }
             }
         }
@@ -169,5 +212,25 @@ mod tests {
             let output = response.clone().into_xml().unwrap();
             assert_eq!(Response::from_xml(output).unwrap(), response);
         }
+    }
+
+    #[test]
+    fn parses_error_and_location_on_status_variant() {
+        let xml = br#"<D:response xmlns:D="DAV:"><D:href>/a</D:href><D:status>HTTP/1.1 423 Locked</D:status><D:error><D:lock-token-submitted><D:href>/a</D:href></D:lock-token-submitted></D:error><D:location><D:href>http://x/b</D:href></D:location></D:response>"#;
+        let response = Response::from_xml(xml.to_vec()).unwrap();
+        assert!(response.error().unwrap().contains("lock-token-submitted"));
+        let Response::Status {
+            location: Some(location),
+            ..
+        } = &response
+        else {
+            panic!("expected status response with location")
+        };
+        assert_eq!(location.0.path(), "/b");
+        assert_eq!(response.href().path(), "/a");
+        assert_eq!(
+            Response::from_xml(response.clone().into_xml().unwrap()).unwrap(),
+            response
+        );
     }
 }

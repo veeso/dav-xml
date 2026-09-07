@@ -123,4 +123,19 @@ mod tests {
         let xml = multistatus.clone().into_xml().unwrap();
         assert_eq!(Multistatus::from_xml(xml).unwrap(), multistatus);
     }
+
+    #[test]
+    fn failures_include_a_response_with_an_error() {
+        let xml = br#"<?xml version="1.0"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>http://www.example.com/bar.html</D:href>
+    <D:status>HTTP/1.1 403 Forbidden</D:status>
+    <D:error><D:cannot-modify-protected-property/></D:error>
+  </D:response>
+</D:multistatus>"#;
+        let multistatus = Multistatus::from_xml(xml.to_vec()).unwrap();
+        assert_eq!(multistatus.failures().count(), 1);
+        assert!(multistatus.response[0].error().is_some());
+    }
 }
