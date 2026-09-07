@@ -39,6 +39,16 @@ impl Prop {
     }
 
     /// Add a typed property with a value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let prop = Prop::default().with(DisplayName("Notes".into()));
+    /// assert_eq!(prop.displayname().unwrap().unwrap().unwrap().0, "Notes");
+    /// ```
     #[must_use]
     pub fn with<P>(mut self, property: P) -> Self
     where
@@ -49,6 +59,16 @@ impl Prop {
     }
 
     /// Add an empty typed property.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let prop = Prop::default().with_name::<DisplayName>();
+    /// assert!(matches!(prop.displayname(), Some(None)));
+    /// ```
     #[must_use]
     pub fn with_name<P: Element>(mut self) -> Self {
         self.0.insert::<P>(Value::Empty);
@@ -83,6 +103,18 @@ pub struct PropBuilder(ValueMap);
 
 impl PropBuilder {
     /// Add a typed property with a value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let prop = Prop::builder()
+    ///     .property(DisplayName("Notes".into()))
+    ///     .build();
+    /// assert_eq!(prop.displayname().unwrap().unwrap().unwrap().0, "Notes");
+    /// ```
     #[must_use]
     pub fn property<P>(mut self, property: P) -> Self
     where
@@ -93,6 +125,16 @@ impl PropBuilder {
     }
 
     /// Add an empty property element, as used in `propfind` and `remove`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    /// use dav_xml::properties::DisplayName;
+    ///
+    /// let prop = Prop::builder().name::<DisplayName>().build();
+    /// assert!(matches!(prop.displayname(), Some(None)));
+    /// ```
     #[must_use]
     pub fn name<P: Element>(mut self) -> Self {
         self.0.insert::<P>(Value::Empty);
@@ -100,6 +142,25 @@ impl PropBuilder {
     }
 
     /// Add an arbitrary child element.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    /// use dav_xml::{ElementName, Value};
+    ///
+    /// let prop = Prop::builder()
+    ///     .raw(
+    ///         ElementName {
+    ///             namespace: None,
+    ///             prefix: None,
+    ///             local_name: "example".into(),
+    ///         },
+    ///         Value::Empty,
+    ///     )
+    ///     .build();
+    /// assert_eq!(prop.names().count(), 1);
+    /// ```
     #[must_use]
     pub fn raw(mut self, name: ElementName<ByteString>, value: Value) -> Self {
         self.0.insert_raw(name, value);
@@ -107,6 +168,15 @@ impl PropBuilder {
     }
 
     /// Finish building the property collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dav_xml::elements::Prop;
+    ///
+    /// let prop = Prop::builder().build();
+    /// assert!(prop.names().next().is_none());
+    /// ```
     #[must_use]
     pub fn build(self) -> Prop {
         Prop(self.0)
