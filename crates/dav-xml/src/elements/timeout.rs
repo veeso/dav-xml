@@ -169,7 +169,7 @@ impl From<Timeout> for Value {
     }
 }
 
-/// A timeout value that cannot be parsed according to RFC 4918 section 14.29 ([RFC 4918 section 14.29](https://www.rfc-editor.org/rfc/rfc4918#section-14.29)).
+/// A timeout value that cannot be parsed according to RFC 4918 sections 10.7 and 14.29 ([RFC 4918 section 10.7](https://www.rfc-editor.org/rfc/rfc4918#section-10.7), [section 14.29](https://www.rfc-editor.org/rfc/rfc4918#section-14.29)).
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[error("invalid timeout: {0}")]
 pub struct InvalidTimeout(String);
