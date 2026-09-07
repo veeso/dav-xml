@@ -2,32 +2,14 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value};
-
-/// The `collection` XML element as defined in
-/// [RFC 4918](http://webdav.org/specs/rfc4918.html#ELEMENT_collection).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Collection;
-
-impl Element for Collection {
-    const NAMESPACE: &'static str = DAV_NAMESPACE;
-    const PREFIX: &'static str = DAV_PREFIX;
-    const LOCAL_NAME: &'static str = "collection";
-}
-
-impl TryFrom<&Value> for Collection {
-    type Error = Error;
-
-    fn try_from(_: &Value) -> Result<Self, Self::Error> {
-        Ok(Self)
-    }
-}
-
-impl From<Collection> for Value {
-    fn from(_: Collection) -> Value {
-        Value::Empty
-    }
-}
+unit_element!(
+    /// The `collection` XML element
+    /// ([RFC 4918 section 14.3](https://www.rfc-editor.org/rfc/rfc4918#section-14.3)).
+    ///
+    /// Identifies a resource as a collection.
+    Collection,
+    "collection"
+);
 
 #[cfg(test)]
 mod tests {

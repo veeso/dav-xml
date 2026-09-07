@@ -6,6 +6,8 @@
 #![doc = include_str!("../README.md")]
 
 mod element;
+#[macro_use]
+mod macros;
 pub mod elements;
 mod error;
 pub mod properties;
