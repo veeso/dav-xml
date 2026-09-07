@@ -12,28 +12,16 @@ use crate::error::{Error, Result};
 use crate::headers::{self, If, IfList, LockTokenHeader, Overwrite};
 
 /// The media type for every RFC 4918 XML request body.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "consumed by the clients added in later tasks")
-)]
 pub(crate) const APPLICATION_XML: &str = "application/xml; charset=utf-8";
 
 /// Builds an [`http::Method`] from a `&'static str`, falling back to `GET`
 /// for the handful of names this module never calls it with.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "consumed by the clients added in later tasks")
-)]
 fn method(name: &'static str) -> http::Method {
     http::Method::from_bytes(name.as_bytes()).unwrap_or(http::Method::GET)
 }
 
 /// The credentials, `If` precondition, and any caller-supplied extra headers
 /// shared by every request built for one call.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "constructed by the clients added in later tasks")
-)]
 pub(crate) struct RequestContext<'a> {
     /// Credentials attached as the `Authorization` header.
     pub auth: &'a Auth,
@@ -49,10 +37,6 @@ pub(crate) struct RequestContext<'a> {
     pub extra: &'a http::HeaderMap,
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "consumed by the clients added in later tasks")
-)]
 impl RequestContext<'_> {
     /// Starts a request for `method` and `url`, applying auth, the `If`
     /// header, and the extra headers. An extra header replaces the
