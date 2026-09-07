@@ -6,7 +6,7 @@ use crate::elements::{LockScope, LockType};
 use crate::{DAV_NAMESPACE, DAV_PREFIX, Element, Error, Value, ValueMap};
 
 /// The `lockentry` XML element
-/// ([RFC 4918 section 14.11](https://www.rfc-editor.org/rfc/rfc4918#section-14.11)).
+/// ([RFC 4918 section 14.10](https://www.rfc-editor.org/rfc/rfc4918#section-14.10)).
 ///
 /// # Examples
 ///
