@@ -42,7 +42,7 @@ fn validate_value_in_context(
     if opaque || is_owner_name(name) {
         return Ok(());
     }
-    let children_opaque = is_prop_name(name);
+    let children_opaque = is_prop_name(name) || is_error_name(name);
 
     match value {
         Value::List(list) => list
@@ -72,7 +72,7 @@ fn validate_content_item(item: &ContentItem, opaque: bool) -> Result<()> {
 }
 
 fn validate_error(name: &ElementName<ByteString>, value: &Value) -> Result<()> {
-    if name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == DavError::LOCAL_NAME {
+    if is_error_name(name) {
         DavError::try_from(value)?.validate()?;
     }
     Ok(())
@@ -377,6 +377,10 @@ fn is_owner_name(name: &ElementName<ByteString>) -> bool {
 
 fn is_prop_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == "prop"
+}
+
+fn is_error_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(DAV_NAMESPACE) && name.local_name == DavError::LOCAL_NAME
 }
 
 #[cfg(test)]

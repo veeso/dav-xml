@@ -26,6 +26,7 @@ enum ReadMode {
     Prop,
     Property,
     Mixed,
+    Error,
 }
 
 #[derive(Default)]
@@ -82,8 +83,10 @@ impl<'x> XmlReader<'x> {
             let (resolve_result, event) = self.read_resolved_event()?;
             match event {
                 Event::Text(text) => {
-                    if matches!(mode, ReadMode::Structured | ReadMode::Prop)
-                        && text.chars().all(char::is_whitespace)
+                    if matches!(
+                        mode,
+                        ReadMode::Structured | ReadMode::Prop | ReadMode::Error
+                    ) && text.chars().all(char::is_whitespace)
                     {
                         continue;
                     }
@@ -175,7 +178,7 @@ impl<'x> XmlReader<'x> {
         Ok(match mode {
             ReadMode::Mixed => mixed_value(content),
             ReadMode::Property => property_value(content),
-            ReadMode::Structured | ReadMode::Prop => Value::Map(map),
+            ReadMode::Structured | ReadMode::Prop | ReadMode::Error => Value::Map(map),
         })
     }
 
@@ -277,6 +280,24 @@ fn is_prop_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(crate::DAV_NAMESPACE) && name.local_name == "prop"
 }
 
+fn is_error_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(crate::DAV_NAMESPACE) && name.local_name == "error"
+}
+
+fn is_known_condition_name(name: &ElementName<ByteString>) -> bool {
+    name.namespace.as_deref() == Some(crate::DAV_NAMESPACE)
+        && matches!(
+            name.local_name.as_ref(),
+            "lock-token-matches-request-uri"
+                | "lock-token-submitted"
+                | "no-conflicting-lock"
+                | "no-external-entities"
+                | "preserved-live-properties"
+                | "propfind-finite-depth"
+                | "cannot-modify-protected-property"
+        )
+}
+
 fn is_structured_property_name(name: &ElementName<ByteString>) -> bool {
     name.namespace.as_deref() == Some(crate::DAV_NAMESPACE)
         && matches!(
@@ -304,9 +325,18 @@ fn child_mode(mode: ReadMode, name: &ElementName<ByteString>) -> ReadMode {
                 ReadMode::Property
             }
         }
+        ReadMode::Error => {
+            if is_known_condition_name(name) {
+                ReadMode::Structured
+            } else {
+                ReadMode::Property
+            }
+        }
         ReadMode::Structured => {
             if is_owner_name(name) {
                 ReadMode::Mixed
+            } else if is_error_name(name) {
+                ReadMode::Error
             } else if is_prop_name(name) {
                 ReadMode::Prop
             } else {
