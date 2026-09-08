@@ -222,7 +222,7 @@ dependencies = [
 
 [[package]]
 name = "dav-xml"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytes",
  "bytestring",
@@ -239,7 +239,7 @@ dependencies = [
 
 [[package]]
 name = "dav-xml-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dav-xml",
  "http",
