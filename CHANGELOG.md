@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.0
+
+Released on 2026-09-08
+
+### Added
+
+- **client:** re-export backend client types from transport modules
+
+> lets downstream code name DavClient<T>/AsyncDavClient<T> field types
+> through dav-xml-client without adding a direct dependency on ureq,
+> reqwest, or isahc.
+
 ## 0.1.0
 
 Released on 2026-09-07

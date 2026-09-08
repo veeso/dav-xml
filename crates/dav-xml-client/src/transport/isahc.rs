@@ -4,6 +4,8 @@
 
 //! [`Transport`] and [`AsyncTransport`] for [`isahc::HttpClient`].
 
+#[doc(inline)]
+pub use isahc::HttpClient;
 use isahc::config::{Configurable, RedirectPolicy};
 use isahc::{AsyncReadResponseExt, ReadResponseExt};
 

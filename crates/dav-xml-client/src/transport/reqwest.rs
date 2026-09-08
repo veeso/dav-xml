@@ -4,6 +4,9 @@
 
 //! [`AsyncTransport`] for [`reqwest::Client`].
 
+#[doc(inline)]
+pub use reqwest::Client;
+
 use super::{AsyncTransport, TransportError, TransportErrorKind};
 
 /// A client that follows no redirects (`WebDAV` clients must see `3xx`

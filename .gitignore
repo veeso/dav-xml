@@ -24,3 +24,5 @@ Thumbs.db
 /docs/superpowers/
 /.superpowers/
 /.claude/plans/
+
+Cargo.lock

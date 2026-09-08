@@ -4,6 +4,9 @@
 
 //! [`Transport`] for [`ureq::Agent`].
 
+#[doc(inline)]
+pub use ureq::Agent;
+
 use super::{Transport, TransportError, TransportErrorKind};
 
 /// An agent configured with the three settings `WebDAV` needs and `ureq`
